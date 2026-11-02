@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "excel-mcp-server-selfhosted"
+version = "0.1.8.post1"
+description = "Self-hosted fork of excel-mcp-server (private use, not published)"
+requires-python = ">=3.9"
+dependencies = [
+    "fastmcp",
+    "mcp",
+    "openpyxl",
+    "typer",
+]
+
+[tool.setuptools]
+packages = ["excel_mcp"]

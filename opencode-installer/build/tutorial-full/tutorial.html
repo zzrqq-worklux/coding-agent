@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>opencode 安装器（厚重版）使用教程</title>
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --ink: #1F1E1D;
+    --muted: #6B6257;
+    --accent: #D97757;
+    --accent-soft: #F4E6DD;
+    --line: #E5DED3;
+    --card: #F7F2EA;
+  }
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; background: #FAF9F5; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    font-family: "Inter", "Segoe UI", "Microsoft YaHei", "微软雅黑", "PingFang SC", sans-serif;
+    color: var(--ink);
+    font-size: 11pt;
+    line-height: 1.75;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .cover { page-break-after: always; padding: 18mm 6mm 0 6mm; background: #F3EEE6; }
+  .cover .eyebrow { color: var(--accent); font-size: 10pt; letter-spacing: 2px; }
+  .cover h1 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 30pt; line-height: 1.25; margin: 10mm 0 4mm; color: var(--ink); font-weight: 600; }
+  .cover .subtitle { font-size: 16pt; color: var(--muted); margin-bottom: 12mm; }
+  .cover .badge { display: inline-block; background: var(--accent-soft); color: #8A4B36; border: 1px solid #E8C9B8; border-radius: 999px; padding: 3mm 6mm; font-size: 11pt; margin-bottom: 12mm; }
+  .cover .lead { font-size: 12pt; color: #4A4038; max-width: 150mm; }
+  .cover .checklist { background: var(--card); border-left: 5px solid var(--accent); padding: 6mm 8mm; margin-top: 12mm; border-radius: 3mm; }
+  .cover .checklist h3 { margin: 0 0 3mm; font-size: 13pt; color: var(--ink); font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; }
+  .cover .checklist ul { margin: 0; padding-left: 6mm; }
+  .cover .note { margin-top: 6mm; font-size: 9.5pt; color: var(--muted); }
+  .cover .footer { margin-top: 12mm; text-align: center; font-size: 8pt; color: #8A8178; }
+  .content { padding: 0 0 8mm; }
+  .content > h1 { display: none; }
+  h2 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 17pt; color: var(--ink); margin: 10mm 0 4mm; padding-bottom: 2mm; border-bottom: 2px solid var(--line); page-break-after: avoid; }
+  h3 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 13pt; color: #A94F35; font-weight: 600; margin: 7mm 0 2mm; page-break-after: avoid; }
+  p { margin: 0 0 3.2mm; orphans: 3; widows: 3; }
+  ul, ol { margin: 0 0 4mm; padding-left: 7mm; }
+  li { margin-bottom: 1.5mm; }
+  strong { color: var(--ink); }
+  blockquote { margin: 4mm 0; padding: 3.5mm 5mm; background: var(--card); border-left: 4px solid var(--accent); border-radius: 2mm; color: #4A4038; page-break-inside: avoid; }
+  blockquote p { margin: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 4mm 0 6mm; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: var(--ink); color: #FAF9F5; text-align: left; padding: 2.5mm 2mm; font-weight: 600; }
+  td { border-bottom: 1px solid var(--line); padding: 2.2mm 2mm; vertical-align: top; }
+  tr:nth-child(even) td { background: #F7F2EA; }
+  code { background: #F0E8DE; color: #8A4B36; padding: 0.5mm 1.5mm; border-radius: 1.2mm; font-family: "Cascadia Mono", Consolas, monospace; font-size: 9.5pt; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 8mm 0 4mm; }
+  .content h2:last-of-type { page-break-before: always; }
+  .footer-note { display: none; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="eyebrow">OPENCODE · 厚重版</div>
+  <h1>opencode 安装器<br>使用教程</h1>
+  <div class="subtitle">给第一次使用的你：从安装到做出第一份 PPT</div>
+  <div class="badge">会做 PPT 的完整版：两个 PPT 小助手 + 邮件 + 表格</div>
+  <p class="lead">这份教程不讲复杂原理，只告诉你：点哪里、按什么、怎么做出一份能用的 PPT。<br>你不需要懂电脑，跟着步骤走就行。</p>
+  <div class="checklist">
+    <h3>开始前，请确认</h3>
+    <ul>
+      <li>一台 Windows 10 / 11 电脑</li>
+      <li>能上网</li>
+      <li>桌面版 Outlook 已登录（用邮件小助手时需要）</li>
+      <li>一把 DeepSeek 钥匙（以 sk- 开头）</li>
+      <li>大约 20～30 分钟；做 PPT 时可能更久</li>
+    </ul>
+  </div>
+  <div class="note">只想做邮件和表格？用便携版更轻快。需要做 PPT，就用这个厚重版。</div>
+  <div class="footer">opencode 安装器 · 厚重版 v4.2.0 · 2026-11-02</div>
+</div>
+<div class="content">
+<h1>opencode 安装器（厚重版）使用教程</h1>
+<blockquote>
+<p>这份教程只讲“怎么用”，不讲复杂原理。你不需要懂电脑，照着做就能装好，也能做出第一份 PPT。</p>
+</blockquote>
+<h2>一、这个完整版能帮你做什么</h2>
+<p><strong>opencode 安装器（厚重版）</strong> 会帮你准备好五样东西：</p>
+<ol>
+<li><strong>opencode</strong>：一个会听你说话、帮你干活的电脑助手。</li>
+<li><strong>PPT-Master</strong>：帮你做一份可以在 PowerPoint 里继续修改的 PPT。</li>
+<li><strong>归藏网页 PPT</strong>：帮你做一份可以在浏览器里全屏播放的网页 PPT。</li>
+<li><strong>邮件小助手</strong>：帮你查看、整理、起草 Outlook 邮件。</li>
+<li><strong>表格小助手</strong>：帮你读取、汇总、修改 Excel 表格。</li>
+</ol>
+<blockquote>
+<p><strong>和便携版的区别</strong>：厚重版多了两个做 PPT 的小助手，安装包更大，安装时间也更长。如果你只做邮件和表格，用便携版更轻快；如果你要做 PPT，就用这个厚重版。</p>
+</blockquote>
+<h2>二、开始前，请准备好</h2>
+<ul>
+<li>一台 Windows 10 或 Windows 11 电脑。</li>
+<li>能上网。</li>
+<li>如果要用邮件小助手：电脑上已经安装并登录了<strong>桌面版 Outlook</strong>（不是网页邮箱）。</li>
+<li>一个 DeepSeek 账号，以及一把“钥匙”。</li>
+<li>大约 20～30 分钟时间（做 PPT 时可能更久）。</li>
+<li>如果准备做 PPT：把资料先放到一个文件夹里，比如 PDF、Word、提纲、图片。</li>
+</ul>
+<h3>什么是“钥匙”？</h3>
+<p>“钥匙”是一串很长的字符，通常以 <code>sk-</code> 开头。它就像你的会员卡，opencode 用它来使用 DeepSeek 的聪明大脑。钥匙只属于你，不要发给别人。</p>
+<h3>怎么拿到钥匙？</h3>
+<ol>
+<li>打开浏览器，访问 <code>platform.deepseek.com</code>。</li>
+<li>注册或登录。</li>
+<li>找到 <strong>API Keys</strong> 这一项（可以理解成“钥匙管理”）。</li>
+<li>点击“创建”或“Create”，复制那串以 <code>sk-</code> 开头的字符。</li>
+<li>先粘贴到记事本里备用。</li>
+</ol>
+<blockquote>
+<p><strong>小提示</strong>：钥匙通常只显示一次，复制后请保存好。如果丢了，可以重新创建一把。</p>
+</blockquote>
+<h3>DeepSeek 怎么收费？</h3>
+<p>DeepSeek 按 token 用量扣费，不是包月。当前官方人民币价格（每百万 tokens，2026-11 查询）：</p>
+<table>
+<thead>
+<tr><th>模型 / 时段</th><th>输入（缓存命中）</th><th>输入（缓存未命中）</th><th>输出</th></tr>
+</thead>
+<tbody>
+<tr><td>deepseek-flash · 空闲</td><td>¥0.02</td><td>¥1</td><td>¥4</td></tr>
+<tr><td>deepseek-flash · 高峰</td><td>¥0.04</td><td>¥2</td><td>¥8</td></tr>
+<tr><td>deepseek-v4-pro · 空闲</td><td>¥0.15</td><td>¥4.5</td><td>¥13.5</td></tr>
+<tr><td>deepseek-v4-pro · 高峰</td><td>¥0.30</td><td>¥9</td><td>¥27</td></tr>
+</tbody>
+</table>
+<p>高峰时段：北京时间周一至周五 9:00–12:00、14:00–18:00（法定节假日除外）；其余时间为空闲时段。</p>
+<p>日常做 PPT、邮件、表格，用 <code>deepseek-flash</code> 即可。一次 10 页 PPT 通常几毛到几块钱，具体取决于文件大小和对话轮数。</p>
+<h3>怎么注册和充值？</h3>
+<ol>
+<li>打开 <code>platform.deepseek.com</code>，用手机号或微信扫码登录；没有账号会自动注册。</li>
+<li>按平台提示完成实名认证（如需要）。</li>
+<li>进入“充值”，用支付宝或微信充值。第一次可以先充 ¥10～¥50 试用。</li>
+<li>进入 <strong>API Keys</strong>，点击“创建”，复制 <code>sk-</code> 开头的 Key（只显示一次）。</li>
+<li>回到安装器，把 Key 粘贴进去。</li>
+</ol>
+<blockquote><p><strong>价格可能调整</strong>，请以官方价格页为准：<code>https://api-docs.deepseek.com/zh-cn/quick_start/pricing</code></p></blockquote>
+<h2>三、安装步骤（跟着做就行）</h2>
+<h3>第 1 步：双击安装器</h3>
+<p>找到 <code>opencode安装器.exe</code>，双击它。</p>
+<p>如果 Windows 弹出“Windows 已保护你的电脑”：</p>
+<ol>
+<li>点击“更多信息”。</li>
+<li>点击“仍要运行”。</li>
+</ol>
+<blockquote>
+<p><strong>不用担心</strong>：这是因为安装器比较新，Windows 还不认识它。确认文件来自可信的人即可。</p>
+</blockquote>
+<h3>第 2 步：看黑色窗口，按提示走</h3>
+<p>安装器会打开一个黑色窗口，里面会出现中文提示。你不需要输入命令，只需要按提示按键。</p>
+<p><strong>开始前建议先连接自己的手机热点。</strong> 安装需要访问 GitHub、npm 和国内镜像，公司网络或代理可能拦截；如果确认公司网络可用，可以忽略。</p>
+<p><strong>最简单的办法：看到不确定的提问，直接按回车。</strong></p>
+<table>
+<thead>
+<tr>
+<th>屏幕上出现</th>
+<th>你按什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>是否继续</td>
+<td>按回车</td>
+</tr>
+<tr>
+<td>是否安装</td>
+<td>按回车</td>
+</tr>
+<tr>
+<td>是否安装 Python</td>
+<td>按回车</td>
+</tr>
+<tr>
+<td>是否安装 PowerShell 7</td>
+<td>按回车（建议安装；从 Git Bash 启动会自动跳过）</td>
+</tr>
+<tr>
+<td>请选择</td>
+<td>按回车（使用推荐选项）</td>
+</tr>
+<tr>
+<td>是否立即启动</td>
+<td>按回车</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>如果你按错了，也没关系。大部分问题都可以重新运行安装器再来一次。</p>
+</blockquote>
+<h3>第 3 步：粘贴 DeepSeek 钥匙</h3>
+<p>当窗口出现“请输入 DeepSeek API Key”时：</p>
+<ol>
+<li>把刚才复制的钥匙粘贴进去。在黑色窗口里可以点右键，或按 <code>Ctrl+V</code>。</li>
+<li>按回车。</li>
+</ol>
+<blockquote>
+<p><strong>正常现象</strong>：粘贴后屏幕上可能看不到字符，这不是没输入，也不是电脑坏了。粘贴一次即可，不要重复粘贴。</p>
+</blockquote>
+<h3>第 4 步：选一个“聪明大脑”</h3>
+<p>窗口可能会让你选“模型”。你可以把它理解成“用哪个聪明大脑”。</p>
+<p>屏幕上会标出“推荐”。<strong>直接按回车，使用推荐的那个</strong>即可。</p>
+<h3>第 5 步：选择要装的小助手</h3>
+<p>窗口会列出四个选项：</p>
+<ul>
+<li>PPT-Master（做可修改的 PPT）</li>
+<li>归藏网页 PPT（做网页 PPT）</li>
+<li>Outlook 邮件助手</li>
+<li>Excel 表格助手</li>
+</ul>
+<p>默认四个都选中。<strong>直接按回车</strong>，四个都会装好。</p>
+<p>如果你只想要其中几个，可以输入前面的序号来取消勾选，再按回车。</p>
+<blockquote>
+<p>建议第一次四个都装。以后想精简，可以重新运行安装器只选需要的。</p>
+</blockquote>
+<h3>第 6 步：等待安装</h3>
+<p>接下来安装器会自动下载和准备需要的文件。屏幕上会显示进度。</p>
+<ul>
+<li>厚重版比便携版大，可能需要几分钟到十几分钟。</li>
+<li><strong>不要关闭黑色窗口。</strong></li>
+<li>如果看到“正在安装 Python”，直接按回车同意即可。Python 是让 PPT 和表格小助手工作的一个零件，不用你操心。</li>
+<li>如果看到“正在安装 PPT 依赖”，也按回车同意，然后耐心等。它可能在准备做 PPT 需要的工具。</li>
+</ul>
+<h3>第 7 步：完成</h3>
+<p>看到“OpenCode 安装完成”后：</p>
+<ul>
+<li>如果问“是否立即启动 OpenCode？” → 按回车。</li>
+<li>如果没启动，也没关系。以后打开一个黑色窗口，输入 <code>opencode</code>，按回车即可。</li>
+</ul>
+<h3>以后怎么打开 opencode？</h3>
+<ol>
+<li>点击电脑左下角的“开始”。</li>
+<li>输入 <code>powershell</code>，打开出现的黑色窗口。</li>
+<li>输入 <code>opencode</code>，按回车。</li>
+<li>稍等一会儿，opencode 的界面就会打开。</li>
+</ol>
+<blockquote>
+<p><strong>桌面快捷方式</strong>：安装器会自动在桌面创建 OpenCode 快捷方式。双击即可打开；把任意文件夹拖到快捷方式上，就会从该文件夹启动。</p>
+</blockquote>
+<h2>四、第一次做 PPT</h2>
+<p>做 PPT 和聊天一样，<strong>把资料和想法说清楚</strong>就行。下面按顺序来。</p>
+<h3>第 1 步：把资料放到一个文件夹</h3>
+<p>新建一个文件夹，比如“项目汇报”，把要用的 PDF、Word、提纲、图片都放进去。</p>
+<h3>第 2 步：在这个文件夹里打开黑色窗口</h3>
+<ol>
+<li>打开这个文件夹。</li>
+<li>点击文件夹上方的地址栏。</li>
+<li>输入 <code>powershell</code>，按回车。</li>
+<li>会弹出一个黑色窗口，而且它已经在这个文件夹里了。</li>
+</ol>
+<h3>第 3 步：打开 opencode</h3>
+<p>在黑色窗口里输入 <code>opencode</code>，按回车。</p>
+<h3>第 4 步：告诉它你要做什么</h3>
+<p>你可以直接这样说：</p>
+<ul>
+<li>“用这个文件夹里的 PDF 做一份 10 页的 PPT，重点讲项目背景、方案和预算。”</li>
+<li>“把这份 Word 提纲做成一份可以在 PowerPoint 里继续修改的 PPT，风格简洁，蓝白色。”</li>
+<li>“做一份分享风格的网页 PPT，10 页左右，适合在浏览器里全屏播放。”</li>
+<li>“先别急着做，先给我一个 8 页的提纲，我确认后再生成。”</li>
+</ul>
+<h3>第 5 步：回答它的问题</h3>
+<p>它可能会问你：</p>
+<ul>
+<li>这份 PPT 给谁看？</li>
+<li>想要几页？</li>
+<li>想要什么风格或颜色？</li>
+<li>有没有公司模板？</li>
+<li>图片用文件夹里的，还是让它帮你找？</li>
+</ul>
+<p>按你的想法回答即可。不确定就说“你推荐一个”。</p>
+<h3>第 6 步：等它做完</h3>
+<p>做 PPT 比聊天慢，可能需要几分钟。<strong>不要关掉窗口</strong>，也不要重复按回车。它做完会告诉你文件在哪里。</p>
+<h3>第 7 步：找到并打开文件</h3>
+<ul>
+<li>如果它说“已保存”，文件通常就在你刚才打开的那个文件夹里。</li>
+<li>如果找不到，直接问它：“刚才生成的文件在哪里？”</li>
+<li><strong>PPT-Master 做出来的</strong>：是一个 PPT 文件，双击用 PowerPoint 打开，可以继续改文字、换图片、调颜色。</li>
+<li><strong>归藏网页 PPT 做出来的</strong>：是一个网页文件，双击用浏览器打开，按方向键翻页；想全屏就点浏览器的全屏按钮。</li>
+</ul>
+<h3>做出更好 PPT 的小窍门</h3>
+<ul>
+<li>先给它一个清楚的提纲，再让它生成。</li>
+<li>告诉它观众是谁、场合是什么、想要几页。</li>
+<li>给它公司模板或参考文件，做出来会更像你们公司的风格。</li>
+<li>一次做 8～12 页比较稳；太长的 PPT 可以分两次做。</li>
+<li>第一版不满意，直接说“第 3 页太挤了，帮我简化”“颜色再稳重一点”，它会继续改。</li>
+</ul>
+<h2>五、邮件和表格小助手</h2>
+<h3>邮件小助手可以这样用</h3>
+<ul>
+<li>“帮我看看今天收到的邮件，挑出最重要的三封，告诉我每封在说什么。”</li>
+<li>“帮我找一下上周客户发来的邮件。”</li>
+<li>“帮我给这个客户回一封信，语气客气一点，先给我看草稿，不要直接发。”</li>
+</ul>
+<blockquote>
+<p>用邮件小助手前，请先打开桌面版 Outlook 并登录。它不能操作网页邮箱。</p>
+</blockquote>
+<h3>表格小助手可以这样用</h3>
+<ul>
+<li>“把这个 Excel 表格里每个月的销售额汇总一下。”</li>
+<li>“帮我找出这个表格里重复的客户名字。”</li>
+<li>“把这张表里的空白行删掉，另存一份新的，不要改原文件。”</li>
+</ul>
+<blockquote>
+<p>用表格小助手前，最好先关闭正在编辑的 Excel 文件，避免文件被占用。告诉它文件在哪里，或者把文件拖进对话窗口。</p>
+</blockquote>
+<h3>使用小原则</h3>
+<ul>
+<li>先说清楚你要什么，再让助手动手。</li>
+<li>涉及发邮件、改文件、删数据时，先让它给你看方案，你确认后再执行。</li>
+<li>不确定的操作，先问一句：“你打算怎么做？”</li>
+</ul>
+<h2>六、遇到问题怎么办</h2>
+<table>
+<thead>
+<tr>
+<th>你看到的</th>
+<th>可以这样做</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>双击没反应</td>
+<td>再双击一次；如果被 Windows 拦住，点“更多信息”→“仍要运行”</td>
+</tr>
+<tr>
+<td>黑色窗口一闪就没了</td>
+<td>重新双击安装器；先关闭安全软件的拦截提示再试</td>
+</tr>
+<tr>
+<td>提示钥匙不对</td>
+<td>检查是否复制完整（以 <code>sk-</code> 开头，没有空格）；确认账号里还有余额</td>
+</tr>
+<tr>
+<td>安装很慢</td>
+<td>厚重版比较大，耐心等；不要关闭窗口；可以换个时间再试</td>
+</tr>
+<tr>
+<td>做 PPT 很慢，像卡住了</td>
+<td>做 PPT 本来就比聊天慢；不要关窗口，等它做完；它可能在准备图片或排版</td>
+</tr>
+<tr>
+<td>找不到做好的 PPT</td>
+<td>直接问它“刚才生成的文件在哪里？”；检查你打开 opencode 时所在的那个文件夹</td>
+</tr>
+<tr>
+<td>PPT 打开后字体或版式乱了</td>
+<td>让它“用常见字体，简化版式，重新生成一版”；或者给它公司模板</td>
+</tr>
+<tr>
+<td>网页 PPT 打不开</td>
+<td>右键文件，选择用 Edge 或 Chrome 打开；允许浏览器显示内容</td>
+</tr>
+<tr>
+<td>图片太多，做得很慢</td>
+<td>先少放几张图，或者让它“先做文字版，图片后面再加”</td>
+</tr>
+<tr>
+<td>只想做邮件和表格</td>
+<td>用便携版更轻快，不需要装两个做 PPT 的小助手</td>
+</tr>
+<tr>
+<td>想更新</td>
+<td>重新运行新版本的安装器，它会自动更新，原来的设置会保留</td>
+</tr>
+<tr>
+<td>想卸载或换电脑</td>
+<td>先不要自己删文件，联系给你安装器的人，帮你安全清理和迁移</td>
+</tr>
+</tbody></table>
+<h2>七、安全与隐私</h2>
+<ul>
+<li>你的 DeepSeek 钥匙只保存在这台电脑上，不会发给别人。</li>
+<li>不要把钥匙截图、复制或发给其他人。</li>
+<li>助手只有在你的要求下才会读文件、改文件或发邮件。</li>
+<li>涉及发送邮件、删除数据、覆盖文件时，先让它给你看草稿或计划，你同意后再做。</li>
+<li>做 PPT 时如果用到公司资料，先确认这些资料可以交给 AI 处理。</li>
+</ul>
+<h2>八、一页速查</h2>
+<ol>
+<li>双击 <code>opencode安装器.exe</code>。</li>
+<li>Windows 拦截 → “更多信息” → “仍要运行”。</li>
+<li>一路按回车；问钥匙时粘贴 <code>sk-</code> 开头的钥匙。</li>
+<li>聪明大脑和四个小助手都按回车，使用推荐选项。</li>
+<li>等待完成；中途让装 Python 或 PPT 零件时按回车。</li>
+<li>以后打开黑色窗口，输入 <code>opencode</code> 回车。</li>
+<li>做 PPT：把资料放一个文件夹 → 在该文件夹打开黑色窗口 → 输入 <code>opencode</code> → 说“用这份 PDF 做一份 10 页 PPT”。</li>
+<li>做邮件/表格：直接说人话：“帮我看看今天的邮件”“帮我汇总这个表格”。</li>
+</ol>
+<blockquote>
+<p><strong>厚重版包含两个做 PPT 的小助手。</strong> 只做邮件和表格，用便携版更轻快。</p>
+</blockquote>
+<hr>
+<p><strong>版本</strong>：厚重版 v4.2.0<br><strong>适合</strong>：需要做 PPT、邮件、表格的同事和朋友<br><strong>记住一句话</strong>：不确定就按回车；做 PPT 先说清楚“给谁看、几页、什么风格”。</p>
+
+</div>
+<div class="footer-note">opencode 安装器 · 厚重版使用教程 · 不确定就按回车</div>
+</body>
+</html>

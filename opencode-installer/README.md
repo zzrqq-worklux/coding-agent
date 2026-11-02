@@ -1,34 +1,76 @@
-# OpenCode 一键安装器 v3
+# OpenCode 一键安装器 v4.2.0
 
 面向国内零基础用户的 OpenCode 安装器（Windows 10/11，简体中文，管理员/普通用户双模式）。
 
-**内置组件（全部嵌入 exe，单文件外发）：**
+## 两个版本
 
-| 组件 | 说明 | 版本 | 许可 |
-|---|---|---|---|
-| [PPT-Master](https://github.com/hugohe3/ppt-master) | 生成原生可编辑 PPTX（PowerPoint 里可继续改） | 6.6.0 | MIT |
-| [归藏网页 PPT](https://github.com/op7418/guizang-ppt-skill) | 生成单文件 HTML 幻灯片（浏览器直接放映） | 2025-09 快照 | AGPL-3.0 |
-| Outlook 邮件助手（MCP） | 列邮箱 / 搜邮件 / 读邮件 / 发邮件（默认存草稿），需桌面版 Outlook | 本仓库自带 | 私有 |
+| 版本 | 内置组件 | 产物 |
+|---|---|---|
+| **便携版** | Outlook 邮件助手 + Excel 表格助手（MCP） | `OpenCode安装器-便携版.exe`（约 0.1 MB） |
+| **厚重版** | PPT-Master 6.7.3 + 归藏网页 PPT + Outlook + Excel | `OpenCode安装器-厚重版.exe`（约 27 MB） |
 
-安装器同时完成：Node.js → Python（可选）→ npm/pip 国内镜像 → OpenCode 安装/更新 → AI 模型配置（DeepSeek / 自定义 OpenAI 兼容）→ 技能与 MCP 部署。
+两个版本都包含完整核心流程：Node.js → Python（可选）→ npm/pip 国内镜像 → OpenCode V2 → DeepSeek 动态模型 → 配置写入。
+
+## v4 重点变化
+
+- **OpenCode V2**：安装 `@opencode/cli`；检测到 V1 `opencode-ai` 时先卸载再迁移到 V2。
+- **DeepSeek 动态模型**：安装时调用 `GET https://api.deepseek.com/v1/models`，不再写死模型名；接口不可用时可手动输入模型 ID。
+- **V2 原生配置**：新配置写 `providers` / `settings` / `mcp.servers` / `permissions` / `agents.title.model`。
+- **兼容已有 V1 配置**：按区段检测 `provider` vs `providers`、`mcp.<name>` vs `mcp.servers`、`permission` vs `permissions`，保留原格式，避免破坏旧配置。
+- **MCP 独立环境**：Outlook / Excel 安装到 `~/.config/opencode/mcp-servers/venv`，配置指向 venv 的 python，避免污染全局 Python。
+- **Excel MCP 复用本机名称**：配置项使用 `my-excel`，不会和已有的 Excel MCP 重复。
+- **TUI 重做**：环境预检、执行计划确认、分步进度、最终报告、转录日志。
+- **内置组件更新**：PPT-Master 升到 6.7.3（本机 Kobold 副本打包，排除 `.env`）；Outlook / Excel MCP 使用本机更新后的源码。
+
+## v4.2.0 快捷方式、DeepSeek 费用与 Claude 风格教程
+
+- **桌面快捷方式**：安装完成自动创建 `OpenCode.lnk`，指向 `%LOCALAPPDATA%\OpenCode\OpenCode.cmd`。
+- **拖拽启动**：双击从桌面启动；把任意文件夹/文件拖到快捷方式上，就从该目录启动 opencode。
+- **DeepSeek 费用说明**：教程补充官方人民币价格、高峰/空闲时段、注册和支付宝/微信充值流程。
+- **Claude 风格教程**：暖米白底色、陶土橙强调色、衬线标题、暖灰卡片；重新导出两份 PDF。
+- 单测增加到 153 个，构建继续自动执行 `-SelfTest` 和发布打包。
+
+## v4.1.0 PowerShell 7 与网络兜底
+
+- **可选安装 PowerShell 7**：默认询问，已有 `pwsh` 则跳过；检测到 Git Bash 时直接跳过。
+- **纯用户目录安装**：下载官方 ZIP 解压到 `%LOCALAPPDATA%\Programs\PowerShell\7`，只写用户 PATH，不调用 winget/MSI，不触发 UAC。
+- **下载兜底**：本地 ZIP → GitHub → 清华 TUNA 镜像 → `OC_POWERSHELL_URL` 自定义镜像；全部失败则跳过，不影响 OpenCode。
+- **SHA256 校验**：固定 PowerShell 7.6.9，所有来源下载后校验 `CE7484804C0F0AD4DDA10C958E71ACDAF7EEBFB22505C1B480F89E0E9F1DA94D`，不匹配自动换源。
+- **网络提示**：开始前提示建议使用手机热点，避免公司网络拦截 npm/GitHub/镜像。
+- **启动方式**：完成页检测到 `pwsh` 时优先用 PowerShell 7 启动 opencode，否则回退 `cmd`。
+- 流程从 7 步调整为 8 步：Node → Python → PowerShell 7 → OpenCode → AI → 组件 → 配置 → 完成。
+
+## v4.0.1 健壮性修复
+
+- **npm 命令固定走 npm.cmd**：避免 PowerShell 把 `npm` 解析成 `npm.ps1`。`npm.ps1` 会用 `Invoke-Expression` 重新执行原始命令文本，导致 `$script:NpmMirror` 等变量在 npm.ps1 作用域里变成未定义。
+- **启动自检**：`-SelfTest` 检查 PowerShell 版本、核心组件版本、核心函数、npm 命令类型、Node/Python/OpenCode 和代理配置；构建时自动执行。
+- **核心版本校验**：`install.ps1` 与 `installer-core.ps1` 版本不一致时直接给出明确错误，避免加载 `%TEMP%` 里的旧核心。
+- **优先本地核心**：从源码运行时优先加载 `src/lib`，不再被 `%TEMP%\opencode-installer-v4` 的旧文件覆盖。
+- **下载诊断**：Node/Python 下载前检查镜像连通性，支持 `HTTPS_PROXY` / `HTTP_PROXY` / 系统代理，失败时输出具体 URL 和异常。
+- **自动打包**：构建完成后同步生成 `build/release/opencode安装器-*.zip`，避免发布旧 exe。
 
 ## 目录结构
 
 ```
 opencode-installer/
 ├─ src/
-│  ├─ install.ps1                 # 主程序（UI 与流程编排）
-│  ├─ lib/installer-core.ps1      # 核心逻辑（版本判断/配置合并/解压部署，均有单测）
+│  ├─ install.ps1                 # 主流程（环境、安装、配置、组件）
+│  ├─ edition.txt                 # 源码运行默认 full；构建时被 edition-*.txt 覆盖
+│  ├─ lib/
+│  │  ├─ installer-core.ps1       # 纯逻辑（版本、schema、patch、模型、安装计划）
+│  │  └─ ui.ps1                   # TUI 渲染
 │  └─ assets/
-│     ├─ ppt-master-skill-v6.6.0.zip   # 官方技能包（59.1 MB）
-│     ├─ guizang-ppt-skill/            # 归藏技能源目录（构建时打包为 zip）
-│     └─ outlook_mcp_server.py         # Outlook MCP 单文件服务
-├─ tests/installer-core.Tests.ps1 # Pester 单测（37 个）
+│     ├─ ppt-master-skill-v6.7.3.zip   # 本机 6.7.3，已排除 .env
+│     ├─ guizang-ppt-skill/            # 归藏技能源目录（构建时打包）
+│     ├─ outlook-mcp/                  # 本机新版 Outlook MCP 源码
+│     └─ excel-mcp/                    # 本机新版 Excel MCP 源码
+├─ tests/installer-core.Tests.ps1 # Pester 单测（153 个）
 ├─ build/
-│  ├─ build.ps1                   # 构建：单测 → 打包 → 编译 → 资源校验 → 冒烟 →（可选）签名
+│  ├─ build.ps1                   # 单测 → 打包 → 编译 → 资源校验 → 冒烟 →（可选）签名
 │  ├─ vendor/ps2exe.ps1           # PS2EXE 编译器（离线构建用，MS-LPL）
-│  ├─ vendor/PS2EXE-LICENSE.txt   # PS2EXE 许可全文
+│  ├─ vendor/PS2EXE-LICENSE.txt
 │  └─ dist/                       # 构建产物（不入库）
+├─ docs/superpowers/plans/        # 实施计划
 └─ README.md
 ```
 
@@ -37,39 +79,74 @@ opencode-installer/
 前置条件：Windows PowerShell 5.1、.NET Framework（系统自带）、Pester（Windows 自带 3.4.0）。
 
 ```powershell
-# 普通构建（不签名）
+# 构建两个版本（默认）
 powershell -ExecutionPolicy Bypass -File build\build.ps1
 
-# 构建 + 自签名（生成自签名代码签名证书并签名，导出 .cer）
+# 只构建便携版
+powershell -ExecutionPolicy Bypass -File build\build.ps1 -Edition portable
+
+# 只构建厚重版
+powershell -ExecutionPolicy Bypass -File build\build.ps1 -Edition full
+
+# 构建 + 自签名
 powershell -ExecutionPolicy Bypass -File build\build.ps1 -Sign
 
-# 用已有的正式证书签名（买证书后用这个）
+# 用正式证书签名
 powershell -ExecutionPolicy Bypass -File build\build.ps1 -Sign -PfxPath D:\cert\my.pfx -PfxPassword xxxx -TimestampUrl http://timestamp.digicert.com
 ```
 
-产物：`build/dist/OpenCode安装器.exe`（约 64.6 MB）。
+产物：
 
-构建流程自带三道验证：**37 个单测** → **exe 内嵌资源校验（5 项）** → **冒烟测试（真实运行 exe 的 `-DryRun` 全流程）**，任一失败即中止构建。
+- `build/dist/OpenCode安装器-便携版.exe`
+- `build/dist/OpenCode安装器-厚重版.exe`
+- `build/release/opencode安装器-便携版.zip`
+- `build/release/opencode安装器-厚重版.zip`
+
+构建流程自带验证：**153 个单测** → **资源打包** → **exe 编译** → **内嵌资源校验** → **`-DryRun` 冒烟测试** → **`-SelfTest` 自检** → **发布目录/zip 打包**，任一失败即中止构建。`-NoPackage` 可跳过最后的发布打包。
 
 ## 安装器行为
 
-1. Node.js / Python：优先 winget，失败回退国内镜像安装包
-2. npm（npmmirror）/ pip（清华）镜像
-3. OpenCode：未装则 `npm install -g opencode-ai`；已装则询问后 `opencode upgrade`（失败回退 npm）
-4. AI 模型：DeepSeek（先做 `api.deepseek.com:443` 连通性检查，再验证 Key，401/403/429/网络错误分类提示）或自定义 OpenAI 兼容 API（同样做 host:port 连通性检查）
-5. 组件多选菜单（默认全选）：PPT-Master（默认装，随后 `pip install -r requirements.txt`）、归藏网页 PPT、Outlook 邮件助手
-6. 更新策略：重跑新版安装器 → 按技能版本号自动覆盖更新（保留用户 `.env`）；OpenCode 用 `opencode upgrade`
+1. **环境预检**：系统、管理员/普通用户、Node、Python、OpenCode 版本与安装方式、现有配置格式、安装目标。
+2. **Node.js LTS**：winget 优先，失败回退 npmmirror MSI。
+3. **Python 3.12**：winget 优先，失败回退国内镜像安装包（PPT 依赖和 MCP 需要）。
+4. **OpenCode V2**：
+   - 未安装 → `npm install -g @opencode/cli@latest`
+   - V1 → 卸载 `opencode-ai`，安装 `@opencode/cli`
+   - V2 npm 安装 → `opencode upgrade --method npm`，失败回退 npm
+   - V2 curl 安装 → `opencode upgrade`
+5. **AI 模型**：
+   - DeepSeek：输入 Key（掩码）→ 调 `/models` 动态获取模型 → 选择默认模型 → Key 存到 `~/.config/opencode/.secrets/deepseek-api-key`，配置用 `{file:...}` 引用。
+   - 自定义 OpenAI 兼容 API：同样先拉 `/models`；失败可手动输入模型 ID。
+   - 模型列表完全来自接口；接口不可用时才要求手动输入，不内置写死的模型名。
+6. **组件菜单**：按 edition 过滤；便携版只有 Outlook / Excel，厚重版四个组件全显示。
+7. **技能部署**：`~/.config/opencode/skills`，保留用户 `.env`，写版本清单。
+8. **MCP 部署**：独立 venv `~/.config/opencode/mcp-servers/venv`，`pip install` 本地包（清华源，失败回退默认源），配置指向 venv python；Excel 使用 `my-excel` 名称。
+9. **配置写入**：先备份，再深度合并，最后校验 JSON；只写一次，避免半成品配置。
+10. **完成报告**：每个组件成功/失败、配置路径、日志路径、下一步。
 
-配置写入一律**合并式**（保留用户已有的 `provider` / `mcp` 等其他配置，写前自动备份）。
+## 配置与密钥
 
-## 调试用参数
+- 新配置写 OpenCode V2 原生格式；已有 V1 配置按区段保留。
+- V2 权限是 `permissions` 数组，安装器只**追加**技能规则，不覆盖已有规则。
+- V1 配置下写 `permission.skill.*`，保持与旧格式一致。
+- DeepSeek Key 单独存放在 `~/.config/opencode/.secrets/deepseek-api-key`（隐藏文件），配置文件只保存 `{file:...}` 引用；不要分享 `.secrets` 目录。
+- 如果已有配置不是合法 JSON，安装器会询问是否备份并重建。
+- 配置写入前会自动备份为 `opencode.json.backup-yyyyMMddHHmmss`。
+
+## 调试参数
 
 ```powershell
-# 干跑：只显示计划，不修改系统（可用于任何机器上验证）
-.\OpenCode安装器.exe -DryRun -NoPause
+# 自检：检查核心版本、npm 命令、Node/Python/OpenCode、代理（不修改系统）
+.\OpenCode安装器-厚重版.exe -SelfTest -NoPause
 
-# 沙箱：把配置/技能目录重定向到指定目录（配合 -DryRun）
-.\OpenCode安装器.exe -DryRun -TestRoot C:\temp\sandbox -NoPause
+# 干跑：只显示计划，不修改系统（可用于任何机器上验证）
+.\OpenCode安装器-厚重版.exe -DryRun -NoPause
+
+# 沙箱：把配置/技能/MCP 目录重定向到指定目录（配合 -DryRun）
+.\OpenCode安装器-厚重版.exe -DryRun -TestRoot C:\temp\sandbox -NoPause
+
+# 源码运行（需要 -PayloadRoot 指向 build\dist 才能找到打包资源）
+powershell -ExecutionPolicy Bypass -File src\install.ps1 -DryRun -TestRoot C:\temp\sandbox -PayloadRoot build\dist -NoPause
 
 # 单测
 Invoke-Pester -Script tests\installer-core.Tests.ps1
@@ -88,7 +165,9 @@ Invoke-Pester -Script tests\installer-core.Tests.ps1
 
 ## 第三方组件与许可
 
-- PPT-Master：MIT，随包携带其 `LICENSE` 与署名文件
-- 归藏网页 PPT：**AGPL-3.0**，整包原样分发、未做任何修改，随包携带 `LICENSE`
-- PS2EXE（构建工具）：Microsoft Limited Public License，许可见 `build/vendor/PS2EXE-LICENSE.txt`
-- Python 依赖（python-pptx / PyMuPDF 等）：**不随包分发**，由用户机器 `pip install` 自行安装（其中 PyMuPDF 为 AGPL，注意合规）
+- **PPT-Master 6.7.3**：MIT，随包携带其 `LICENSE` 与署名文件；打包时已排除本机 `.env`。
+- **归藏网页 PPT**：**AGPL-3.0**，整包原样分发、未做任何修改，随包携带 `LICENSE`。
+- **Outlook MCP（outlook-com-mcp）**：MIT，随包携带 `LICENSE`。
+- **Excel MCP（excel-mcp-server-selfhosted）**：本机私有自托管分支，未公开发布；随包携带其 `pyproject.toml` 与源码。
+- **PS2EXE（构建工具）**：Microsoft Limited Public License，许可见 `build/vendor/PS2EXE-LICENSE.txt`。
+- **Python 依赖**（python-pptx / PyMuPDF / fastmcp / pywin32 / openpyxl 等）：**不随包分发**，由用户机器 `pip install` 自行安装（其中 PyMuPDF 为 AGPL，注意合规）。

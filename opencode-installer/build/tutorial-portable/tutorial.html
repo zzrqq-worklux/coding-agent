@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>opencode 安装器（便携版）使用教程</title>
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --ink: #1F1E1D;
+    --muted: #6B6257;
+    --accent: #D97757;
+    --accent-soft: #F4E6DD;
+    --line: #E5DED3;
+    --card: #F7F2EA;
+  }
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; background: #FAF9F5; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    font-family: "Inter", "Segoe UI", "Microsoft YaHei", "微软雅黑", "PingFang SC", sans-serif;
+    color: var(--ink);
+    font-size: 11pt;
+    line-height: 1.75;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .cover { page-break-after: always; padding: 18mm 6mm 0 6mm; background: #F3EEE6; }
+  .cover .eyebrow { color: var(--accent); font-size: 10pt; letter-spacing: 2px; }
+  .cover h1 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 30pt; line-height: 1.25; margin: 10mm 0 4mm; color: var(--ink); font-weight: 600; }
+  .cover .subtitle { font-size: 16pt; color: var(--muted); margin-bottom: 12mm; }
+  .cover .badge { display: inline-block; background: var(--accent-soft); color: #8A4B36; border: 1px solid #E8C9B8; border-radius: 999px; padding: 3mm 6mm; font-size: 11pt; margin-bottom: 12mm; }
+  .cover .lead { font-size: 12pt; color: #4A4038; max-width: 150mm; }
+  .cover .checklist { background: var(--card); border-left: 5px solid var(--accent); padding: 6mm 8mm; margin-top: 12mm; border-radius: 3mm; }
+  .cover .checklist h3 { margin: 0 0 3mm; font-size: 13pt; color: var(--ink); font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; }
+  .cover .checklist ul { margin: 0; padding-left: 6mm; }
+  .cover .footer { margin-top: 12mm; text-align: center; font-size: 8pt; color: #8A8178; }
+  .content { padding: 0 0 8mm; }
+  .content > h1 { display: none; }
+  h2 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 17pt; color: var(--ink); margin: 10mm 0 4mm; padding-bottom: 2mm; border-bottom: 2px solid var(--line); page-break-after: avoid; }
+  h3 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 13pt; color: #A94F35; font-weight: 600; margin: 7mm 0 2mm; page-break-after: avoid; }
+  p { margin: 0 0 3.2mm; orphans: 3; widows: 3; }
+  ul, ol { margin: 0 0 4mm; padding-left: 7mm; }
+  li { margin-bottom: 1.5mm; }
+  strong { color: var(--ink); }
+  blockquote { margin: 4mm 0; padding: 3.5mm 5mm; background: var(--card); border-left: 4px solid var(--accent); border-radius: 2mm; color: #4A4038; page-break-inside: avoid; }
+  blockquote p { margin: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 4mm 0 6mm; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: var(--ink); color: #FAF9F5; text-align: left; padding: 2.5mm 2mm; font-weight: 600; }
+  td { border-bottom: 1px solid var(--line); padding: 2.2mm 2mm; vertical-align: top; }
+  tr:nth-child(even) td { background: #F7F2EA; }
+  code { background: #F0E8DE; color: #8A4B36; padding: 0.5mm 1.5mm; border-radius: 1.2mm; font-family: "Cascadia Mono", Consolas, monospace; font-size: 9.5pt; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 8mm 0 4mm; }
+  .content h2:last-of-type { page-break-before: always; }
+  .footer-note { display: none; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="eyebrow">OPENCODE · 便携版</div>
+  <h1>opencode 安装器<br>使用教程</h1>
+  <div class="subtitle">给第一次使用的你：照着做就能装好</div>
+  <div class="badge">只装「邮件小助手」+「表格小助手」</div>
+  <p class="lead">这份教程不讲复杂原理，只告诉你：点哪里、按什么、遇到问题怎么办。<br>你不需要懂电脑，跟着步骤走就行。</p>
+  <div class="checklist">
+    <h3>开始前，请确认</h3>
+    <ul>
+      <li>一台 Windows 10 / 11 电脑</li>
+      <li>能上网</li>
+      <li>桌面版 Outlook 已登录（用邮件小助手时需要）</li>
+      <li>一把 DeepSeek 钥匙（以 sk- 开头）</li>
+    </ul>
+  </div>
+  <div class="footer">opencode 安装器 · 便携版 v4.2.0 · 2026-11-02</div>
+</div>
+<div class="content">
+<h1>opencode 安装器（便携版）使用教程</h1>
+<blockquote>
+<p>这份教程只讲“怎么用”，不讲复杂原理。你不需要懂电脑，照着做就行。</p>
+</blockquote>
+<h2>一、这个小工具能帮你做什么</h2>
+<p><strong>opencode 安装器（便携版）</strong> 会帮你准备好三样东西：</p>
+<ol>
+<li><strong>opencode</strong>：一个会听你说话、帮你干活的电脑助手。</li>
+<li><strong>邮件小助手</strong>：帮你查看、整理、起草 Outlook 邮件。</li>
+<li><strong>表格小助手</strong>：帮你读取、汇总、修改 Excel 表格。</li>
+</ol>
+<blockquote>
+<p><strong>注意</strong>：便携版<strong>不包含做 PPT 的功能</strong>。如果你需要做 PPT，请使用“厚重版”。</p>
+</blockquote>
+<h2>二、开始前，请准备好</h2>
+<ul>
+<li>一台 Windows 10 或 Windows 11 电脑。</li>
+<li>能上网。</li>
+<li>如果要用邮件小助手：电脑上已经安装并登录了<strong>桌面版 Outlook</strong>（不是网页邮箱）。</li>
+<li>一个 DeepSeek 账号，以及一把“钥匙”。</li>
+<li>大约 10～20 分钟时间。</li>
+</ul>
+<h3>什么是“钥匙”？</h3>
+<p>“钥匙”是一串很长的字符，通常以 <code>sk-</code> 开头。它就像你的会员卡，opencode 用它来使用 DeepSeek 的聪明大脑。钥匙只属于你，不要发给别人。</p>
+<h3>怎么拿到钥匙？</h3>
+<ol>
+<li>打开浏览器，访问 <code>platform.deepseek.com</code>。</li>
+<li>注册或登录。</li>
+<li>找到 <strong>API Keys</strong> 这一项（可以理解成“钥匙管理”）。</li>
+<li>点击“创建”或“Create”，复制那串以 <code>sk-</code> 开头的字符。</li>
+<li>先粘贴到记事本里备用。</li>
+</ol>
+<blockquote>
+<p><strong>小提示</strong>：钥匙通常只显示一次，复制后请保存好。如果丢了，可以重新创建一把。</p>
+</blockquote>
+<h3>DeepSeek 怎么收费？</h3>
+<p>DeepSeek 按 token 用量扣费，不是包月。当前官方人民币价格（每百万 tokens，2026-11 查询）：</p>
+<table>
+<thead>
+<tr><th>模型 / 时段</th><th>输入（缓存命中）</th><th>输入（缓存未命中）</th><th>输出</th></tr>
+</thead>
+<tbody>
+<tr><td>deepseek-flash · 空闲</td><td>¥0.02</td><td>¥1</td><td>¥4</td></tr>
+<tr><td>deepseek-flash · 高峰</td><td>¥0.04</td><td>¥2</td><td>¥8</td></tr>
+<tr><td>deepseek-v4-pro · 空闲</td><td>¥0.15</td><td>¥4.5</td><td>¥13.5</td></tr>
+<tr><td>deepseek-v4-pro · 高峰</td><td>¥0.30</td><td>¥9</td><td>¥27</td></tr>
+</tbody>
+</table>
+<p>高峰时段：北京时间周一至周五 9:00–12:00、14:00–18:00（法定节假日除外）；其余时间为空闲时段。</p>
+<p>日常做 PPT、邮件、表格，用 <code>deepseek-flash</code> 即可。一次 10 页 PPT 通常几毛到几块钱，具体取决于文件大小和对话轮数。</p>
+<h3>怎么注册和充值？</h3>
+<ol>
+<li>打开 <code>platform.deepseek.com</code>，用手机号或微信扫码登录；没有账号会自动注册。</li>
+<li>按平台提示完成实名认证（如需要）。</li>
+<li>进入“充值”，用支付宝或微信充值。第一次可以先充 ¥10～¥50 试用。</li>
+<li>进入 <strong>API Keys</strong>，点击“创建”，复制 <code>sk-</code> 开头的 Key（只显示一次）。</li>
+<li>回到安装器，把 Key 粘贴进去。</li>
+</ol>
+<blockquote><p><strong>价格可能调整</strong>，请以官方价格页为准：<code>https://api-docs.deepseek.com/zh-cn/quick_start/pricing</code></p></blockquote>
+<h2>三、安装步骤（跟着做就行）</h2>
+<h3>第 1 步：双击安装器</h3>
+<p>找到 <code>opencode安装器.exe</code>，双击它。</p>
+<p>如果 Windows 弹出“Windows 已保护你的电脑”：</p>
+<ol>
+<li>点击“更多信息”。</li>
+<li>点击“仍要运行”。</li>
+</ol>
+<blockquote>
+<p><strong>不用担心</strong>：这是因为安装器比较新，Windows 还不认识它。确认文件来自可信的人即可。</p>
+</blockquote>
+<h3>第 2 步：看黑色窗口，按提示走</h3>
+<p>安装器会打开一个黑色窗口，里面会出现中文提示。你不需要输入命令，只需要按提示按键。</p>
+<p><strong>开始前建议先连接自己的手机热点。</strong> 安装需要访问 GitHub、npm 和国内镜像，公司网络或代理可能拦截；如果确认公司网络可用，可以忽略。</p>
+<p><strong>最简单的办法：看到不确定的提问，直接按回车。</strong></p>
+<table>
+<thead>
+<tr>
+<th>屏幕上出现</th>
+<th>你按什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>是否继续</td>
+<td>按回车</td>
+</tr>
+<tr>
+<td>是否安装</td>
+<td>按回车</td>
+</tr>
+<tr>
+<td>是否安装 Python</td>
+<td>按回车</td>
+</tr>
+<tr>
+<td>是否安装 PowerShell 7</td>
+<td>按回车（建议安装；从 Git Bash 启动会自动跳过）</td>
+</tr>
+<tr>
+<td>请选择</td>
+<td>按回车（使用推荐选项）</td>
+</tr>
+<tr>
+<td>是否立即启动</td>
+<td>按回车</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>如果你按错了，也没关系。大部分问题都可以重新运行安装器再来一次。</p>
+</blockquote>
+<h3>第 3 步：粘贴 DeepSeek 钥匙</h3>
+<p>当窗口出现“请输入 DeepSeek API Key”时：</p>
+<ol>
+<li>把刚才复制的钥匙粘贴进去。在黑色窗口里可以点右键，或按 <code>Ctrl+V</code>。</li>
+<li>按回车。</li>
+</ol>
+<blockquote>
+<p><strong>正常现象</strong>：粘贴后屏幕上可能看不到字符，这不是没输入，也不是电脑坏了。粘贴一次即可，不要重复粘贴。</p>
+</blockquote>
+<h3>第 4 步：选一个“聪明大脑”</h3>
+<p>窗口可能会让你选“模型”。你可以把它理解成“用哪个聪明大脑”。</p>
+<p>屏幕上会标出“推荐”。<strong>直接按回车，使用推荐的那个</strong>即可。</p>
+<h3>第 5 步：选择要装的小助手</h3>
+<p>窗口会列出：</p>
+<ul>
+<li>Outlook 邮件助手</li>
+<li>Excel 表格助手</li>
+</ul>
+<p>默认两个都选中。<strong>直接按回车</strong>，两个都会装好。</p>
+<p>如果你只想要其中一个，可以输入前面的序号来取消勾选，再按回车。</p>
+<h3>第 6 步：等待安装</h3>
+<p>接下来安装器会自动下载和准备需要的文件。屏幕上会显示进度。</p>
+<ul>
+<li>可能需要几分钟，取决于网速。</li>
+<li><strong>不要关闭黑色窗口。</strong></li>
+<li>如果看到“正在安装 Python”，直接按回车同意即可。Python 是让表格小助手工作的一个零件，不用你操心。</li>
+</ul>
+<h3>第 7 步：完成</h3>
+<p>看到“OpenCode 安装完成”后：</p>
+<ul>
+<li>如果问“是否立即启动 OpenCode？” → 按回车。</li>
+<li>如果没启动，也没关系。以后打开一个黑色窗口，输入 <code>opencode</code>，按回车即可。</li>
+</ul>
+<h3>以后怎么打开 opencode？</h3>
+<ol>
+<li>点击电脑左下角的“开始”。</li>
+<li>输入 <code>powershell</code>，打开出现的黑色窗口。</li>
+<li>输入 <code>opencode</code>，按回车。</li>
+<li>稍等一会儿，opencode 的界面就会打开。</li>
+</ol>
+<blockquote>
+<p><strong>桌面快捷方式</strong>：安装器会自动在桌面创建 OpenCode 快捷方式。双击即可打开；把任意文件夹拖到快捷方式上，就会从该文件夹启动。</p>
+</blockquote>
+<h2>四、第一次使用</h2>
+<p>打开 opencode 后，你会看到一个可以输入文字的窗口。<strong>直接用平常说话的方式</strong>告诉它你要做什么。</p>
+<h3>邮件小助手可以这样用</h3>
+<ul>
+<li>“帮我看看今天收到的邮件，挑出最重要的三封，告诉我每封在说什么。”</li>
+<li>“帮我找一下上周客户发来的邮件。”</li>
+<li>“帮我给这个客户回一封信，语气客气一点，先给我看草稿，不要直接发。”</li>
+</ul>
+<blockquote>
+<p>用邮件小助手前，请先打开桌面版 Outlook 并登录。它不能操作网页邮箱。</p>
+</blockquote>
+<h3>表格小助手可以这样用</h3>
+<ul>
+<li>“把这个 Excel 表格里每个月的销售额汇总一下。”</li>
+<li>“帮我找出这个表格里重复的客户名字。”</li>
+<li>“把这张表里的空白行删掉，另存一份新的，不要改原文件。”</li>
+</ul>
+<blockquote>
+<p>用表格小助手前，最好先关闭正在编辑的 Excel 文件，避免文件被占用。告诉它文件在哪里，或者把文件拖进对话窗口。</p>
+</blockquote>
+<h3>使用小原则</h3>
+<ul>
+<li>先说清楚你要什么，再让助手动手。</li>
+<li>涉及发邮件、改文件、删数据时，先让它给你看方案，你确认后再执行。</li>
+<li>不确定的操作，先问一句：“你打算怎么做？”</li>
+</ul>
+<h2>五、遇到问题怎么办</h2>
+<table>
+<thead>
+<tr>
+<th>你看到的</th>
+<th>可以这样做</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>双击没反应</td>
+<td>再双击一次；如果被 Windows 拦住，点“更多信息”→“仍要运行”</td>
+</tr>
+<tr>
+<td>黑色窗口一闪就没了</td>
+<td>重新双击安装器；先关闭安全软件的拦截提示再试</td>
+</tr>
+<tr>
+<td>提示钥匙不对</td>
+<td>检查是否复制完整（以 <code>sk-</code> 开头，没有空格）；确认账号里还有余额</td>
+</tr>
+<tr>
+<td>邮件小助手不能用</td>
+<td>打开桌面版 Outlook 并登录；确认不是网页邮箱；关掉再试</td>
+</tr>
+<tr>
+<td>表格小助手不能用</td>
+<td>先关闭 Excel 文件；换一个简单的表格文件试试</td>
+</tr>
+<tr>
+<td>安装很慢</td>
+<td>网络问题，耐心等；不要关闭窗口；可以换个时间再试</td>
+</tr>
+<tr>
+<td>想更新</td>
+<td>重新运行新版本的安装器，它会自动更新，原来的设置会保留</td>
+</tr>
+<tr>
+<td>想卸载或换电脑</td>
+<td>先不要自己删文件，联系给你安装器的人，帮你安全清理和迁移</td>
+</tr>
+</tbody></table>
+<h2>六、安全与隐私</h2>
+<ul>
+<li>你的 DeepSeek 钥匙只保存在这台电脑上，不会发给别人。</li>
+<li>不要把钥匙截图、复制或发给其他人。</li>
+<li>助手只有在你的要求下才会读文件、改文件或发邮件。</li>
+<li>涉及发送邮件、删除数据、覆盖文件时，先让它给你看草稿或计划，你同意后再做。</li>
+</ul>
+<h2>七、一页速查</h2>
+<ol>
+<li>双击 <code>opencode安装器.exe</code>。</li>
+<li>Windows 拦截 → “更多信息” → “仍要运行”。</li>
+<li>一路按回车；问钥匙时粘贴 <code>sk-</code> 开头的钥匙。</li>
+<li>聪明大脑和两个小助手都按回车，使用推荐选项。</li>
+<li>等待完成；问是否启动时按回车。</li>
+<li>以后打开黑色窗口，输入 <code>opencode</code> 回车。</li>
+<li>直接说人话：“帮我看看今天的邮件”“帮我汇总这个表格”。</li>
+</ol>
+<blockquote>
+<p><strong>便携版不含 PPT 功能。</strong> 需要做 PPT，请使用厚重版。</p>
+</blockquote>
+<hr>
+<p><strong>版本</strong>：便携版 v4.2.0<br><strong>适合</strong>：第一次使用 opencode 的同事、朋友<br><strong>记住一句话</strong>：不确定就按回车；涉及发信、改文件，先看草稿再确认。</p>
+
+</div>
+<div class="footer-note">opencode 安装器 · 便携版使用教程 · 不确定就按回车</div>
+</body>
+</html>

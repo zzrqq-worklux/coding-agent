@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "outlook-com-mcp"
+version = "0.1.0"
+description = "MCP server driving local Microsoft Outlook via COM — no cloud auth, works with on-prem Exchange / 本机 Outlook COM 的 MCP 服务器"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Merrick Zeng" }]
+keywords = ["mcp", "model-context-protocol", "outlook", "email", "com", "windows", "exchange"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications :: Email",
+]
+dependencies = [
+    "pywin32>=306",
+    "fastmcp>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["build", "twine"]
+
+[project.scripts]
+outlook-com-mcp = "outlook_com_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

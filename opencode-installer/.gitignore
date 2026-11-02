@@ -1,2 +1,4 @@
 build/dist/
+build/release/
+build/tutorial-*/edge-profile*/
 *.log

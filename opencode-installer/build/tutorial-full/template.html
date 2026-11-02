@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>opencode 安装器（厚重版）使用教程</title>
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --ink: #1F1E1D;
+    --muted: #6B6257;
+    --accent: #D97757;
+    --accent-soft: #F4E6DD;
+    --line: #E5DED3;
+    --card: #F7F2EA;
+  }
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; background: #FAF9F5; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    font-family: "Inter", "Segoe UI", "Microsoft YaHei", "微软雅黑", "PingFang SC", sans-serif;
+    color: var(--ink);
+    font-size: 11pt;
+    line-height: 1.75;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .cover { page-break-after: always; padding: 18mm 6mm 0 6mm; background: #F3EEE6; }
+  .cover .eyebrow { color: var(--accent); font-size: 10pt; letter-spacing: 2px; }
+  .cover h1 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 30pt; line-height: 1.25; margin: 10mm 0 4mm; color: var(--ink); font-weight: 600; }
+  .cover .subtitle { font-size: 16pt; color: var(--muted); margin-bottom: 12mm; }
+  .cover .badge { display: inline-block; background: var(--accent-soft); color: #8A4B36; border: 1px solid #E8C9B8; border-radius: 999px; padding: 3mm 6mm; font-size: 11pt; margin-bottom: 12mm; }
+  .cover .lead { font-size: 12pt; color: #4A4038; max-width: 150mm; }
+  .cover .checklist { background: var(--card); border-left: 5px solid var(--accent); padding: 6mm 8mm; margin-top: 12mm; border-radius: 3mm; }
+  .cover .checklist h3 { margin: 0 0 3mm; font-size: 13pt; color: var(--ink); font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; }
+  .cover .checklist ul { margin: 0; padding-left: 6mm; }
+  .cover .note { margin-top: 6mm; font-size: 9.5pt; color: var(--muted); }
+  .cover .footer { margin-top: 12mm; text-align: center; font-size: 8pt; color: #8A8178; }
+  .content { padding: 0 0 8mm; }
+  .content > h1 { display: none; }
+  h2 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 17pt; color: var(--ink); margin: 10mm 0 4mm; padding-bottom: 2mm; border-bottom: 2px solid var(--line); page-break-after: avoid; }
+  h3 { font-family: "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", Georgia, serif; font-size: 13pt; color: #A94F35; font-weight: 600; margin: 7mm 0 2mm; page-break-after: avoid; }
+  p { margin: 0 0 3.2mm; orphans: 3; widows: 3; }
+  ul, ol { margin: 0 0 4mm; padding-left: 7mm; }
+  li { margin-bottom: 1.5mm; }
+  strong { color: var(--ink); }
+  blockquote { margin: 4mm 0; padding: 3.5mm 5mm; background: var(--card); border-left: 4px solid var(--accent); border-radius: 2mm; color: #4A4038; page-break-inside: avoid; }
+  blockquote p { margin: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 4mm 0 6mm; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: var(--ink); color: #FAF9F5; text-align: left; padding: 2.5mm 2mm; font-weight: 600; }
+  td { border-bottom: 1px solid var(--line); padding: 2.2mm 2mm; vertical-align: top; }
+  tr:nth-child(even) td { background: #F7F2EA; }
+  code { background: #F0E8DE; color: #8A4B36; padding: 0.5mm 1.5mm; border-radius: 1.2mm; font-family: "Cascadia Mono", Consolas, monospace; font-size: 9.5pt; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 8mm 0 4mm; }
+  .content h2:last-of-type { page-break-before: always; }
+  .footer-note { display: none; }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="eyebrow">OPENCODE · 厚重版</div>
+  <h1>opencode 安装器<br>使用教程</h1>
+  <div class="subtitle">给第一次使用的你：从安装到做出第一份 PPT</div>
+  <div class="badge">会做 PPT 的完整版：两个 PPT 小助手 + 邮件 + 表格</div>
+  <p class="lead">这份教程不讲复杂原理，只告诉你：点哪里、按什么、怎么做出一份能用的 PPT。<br>你不需要懂电脑，跟着步骤走就行。</p>
+  <div class="checklist">
+    <h3>开始前，请确认</h3>
+    <ul>
+      <li>一台 Windows 10 / 11 电脑</li>
+      <li>能上网</li>
+      <li>桌面版 Outlook 已登录（用邮件小助手时需要）</li>
+      <li>一把 DeepSeek 钥匙（以 sk- 开头）</li>
+      <li>大约 20～30 分钟；做 PPT 时可能更久</li>
+    </ul>
+  </div>
+  <div class="note">只想做邮件和表格？用便携版更轻快。需要做 PPT，就用这个厚重版。</div>
+  <div class="footer">opencode 安装器 · 厚重版 v4.2.0 · 2026-11-02</div>
+</div>
+<div class="content">
+{{BODY}}
+</div>
+<div class="footer-note">opencode 安装器 · 厚重版使用教程 · 不确定就按回车</div>
+</body>
+</html>
