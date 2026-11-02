@@ -1,6 +1,6 @@
 ﻿# installer-core.ps1 - core logic for OpenCode 安装器 (v4)
 
-$script:InstallerCoreVersion = '4.2.0'
+$script:InstallerCoreVersion = '4.2.1'
 $script:PowerShell7Version = '7.6.9'
 $script:PowerShell7Sha256 = 'CE7484804C0F0AD4DDA10C958E71ACDAF7EEBFB22505C1B480F89E0E9F1DA94D'
 
@@ -141,6 +141,144 @@ function Get-MajorVersion {
     if ([string]::IsNullOrWhiteSpace($Version)) { return $null }
     if ($Version -match '^\s*v?(\d+)') { return [int]$Matches[1] }
     return $null
+}
+
+function Get-OpenCodeLatestVersion {
+    param(
+        [string[]]$Registries = @('https://registry.npmmirror.com', 'https://registry.npmjs.org'),
+        [int]$TimeoutSec = 5,
+        [scriptblock]$Fetch
+    )
+
+    if (-not $Fetch) {
+        $Fetch = {
+            param($Url, $Timeout)
+            Invoke-RestMethod -Uri $Url -TimeoutSec $Timeout -Headers @{ 'User-Agent' = 'opencode-installer' } -ErrorAction Stop
+        }
+    }
+
+    foreach ($registry in @($Registries)) {
+        if ([string]::IsNullOrWhiteSpace($registry)) { continue }
+        $url = $registry.TrimEnd('/') + '/@opencode/cli/latest'
+        try {
+            $response = & $Fetch $url $TimeoutSec
+            $text = if ($response -is [string]) { $response } elseif ($null -ne $response -and $response.PSObject.Properties['version']) { [string]$response.version } else { '' }
+            if ([string]::IsNullOrWhiteSpace($text)) { continue }
+            $match = [regex]::Match($text, '\d+\.\d+\.\d+')
+            if ($match.Success) { return $match.Value }
+        } catch {
+            continue
+        }
+    }
+    return $null
+}
+
+function ConvertTo-MenuInput {
+    param([string]$Text)
+
+    if ($null -eq $Text) { return '' }
+    $value = ([string]$Text) -replace '[\x00-\x1F\x7F]', ''
+    $characters = foreach ($character in $value.ToCharArray()) {
+        $code = [int][char]$character
+        if ($code -ge 0xFF01 -and $code -le 0xFF5E) { [char]($code - 0xFEE0) } else { $character }
+    }
+    return ((-join $characters).Trim())
+}
+
+function Resolve-AiProviderChoice {
+    param([string]$Choice)
+
+    $normalized = ConvertTo-MenuInput -Text $Choice
+    if ([string]::IsNullOrWhiteSpace($normalized)) { return 'deepseek' }
+    switch ($normalized.ToLowerInvariant()) {
+        '1' { return 'deepseek' }
+        '2' { return 'custom' }
+        'deepseek' { return 'deepseek' }
+        'custom' { return 'custom' }
+        default { return $null }
+    }
+}
+
+function ConvertTo-CommandLineArgument {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) { return '""' }
+    if ($Value -match '[\s"]') { return '"' + ($Value -replace '"', '\"') + '"' }
+    return $Value
+}
+
+function Invoke-CommandWithTimeout {
+    param(
+        [Parameter(Mandatory = $true)][string]$FilePath,
+        [string[]]$Arguments = @(),
+        [int]$TimeoutSec = 300,
+        [int]$HeartbeatSec = 15,
+        [scriptblock]$OnHeartbeat
+    )
+
+    $argumentLine = (@($Arguments) | ForEach-Object { ConvertTo-CommandLineArgument ([string]$_) }) -join ' '
+    if ($FilePath -match '\.(cmd|bat)$') {
+        $executable = $env:ComSpec
+        $processArguments = '/d /s /c "' + (ConvertTo-CommandLineArgument $FilePath) + $(if ($argumentLine) { ' ' + $argumentLine } else { '' }) + '"'
+    } else {
+        $executable = $FilePath
+        $processArguments = $argumentLine
+    }
+
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $executable
+    $startInfo.Arguments = $processArguments
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.CreateNoWindow = $true
+    $startInfo.StandardOutputEncoding = [System.Text.Encoding]::Default
+    $startInfo.StandardErrorEncoding = [System.Text.Encoding]::Default
+
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    $outputTask = $null
+    $errorTask = $null
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $timedOut = $false
+    try {
+        if (-not $process.Start()) { throw "无法启动进程：$FilePath" }
+        $outputTask = $process.StandardOutput.ReadToEndAsync()
+        $errorTask = $process.StandardError.ReadToEndAsync()
+        $nextHeartbeat = if ($HeartbeatSec -gt 0) { $HeartbeatSec } else { [int]::MaxValue }
+        while (-not $process.WaitForExit(1000)) {
+            $elapsed = [int]$stopwatch.Elapsed.TotalSeconds
+            if ($TimeoutSec -gt 0 -and $elapsed -ge $TimeoutSec) {
+                $timedOut = $true
+                try { & taskkill.exe /PID $process.Id /T /F 2>&1 | Out-Null } catch { try { $process.Kill() } catch { } }
+                try { $process.WaitForExit(5000) | Out-Null } catch { }
+                break
+            }
+            if ($HeartbeatSec -gt 0 -and $elapsed -ge $nextHeartbeat) {
+                if ($OnHeartbeat) { try { & $OnHeartbeat $elapsed } catch { } }
+                $nextHeartbeat += $HeartbeatSec
+            }
+        }
+        if (-not $process.HasExited) {
+            try { $process.Kill() } catch { }
+            try { $process.WaitForExit(5000) | Out-Null } catch { }
+        }
+    } finally {
+        $stopwatch.Stop()
+    }
+
+    $output = if ($outputTask -and $outputTask.Wait(5000)) { [string]$outputTask.Result } else { '' }
+    $errorOutput = if ($errorTask -and $errorTask.Wait(5000)) { [string]$errorTask.Result } else { '' }
+    $exitCode = if ($timedOut) { -1 } elseif ($process.HasExited) { $process.ExitCode } else { -1 }
+    try { $process.Dispose() } catch { }
+
+    return [pscustomobject]@{
+        ExitCode    = $exitCode
+        TimedOut    = $timedOut
+        Output      = $(if ($null -eq $output) { '' } else { $output.TrimEnd() })
+        Error       = $(if ($null -eq $errorOutput) { '' } else { $errorOutput.TrimEnd() })
+        DurationSec = [int]$stopwatch.Elapsed.TotalSeconds
+    }
 }
 
 function Get-OpenCodeInstallMethod {
@@ -477,20 +615,37 @@ function Get-OpenCodeInstallPlan {
         }
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($latest) -and -not [string]::IsNullOrWhiteSpace($version)) {
+    if (-not [string]::IsNullOrWhiteSpace($version)) {
+        if ([string]::IsNullOrWhiteSpace($latest)) {
+            return @{
+                Action   = 'None'
+                Reason   = "已安装 v$version（无法获取最新版，保留现有版本）"
+                Commands = @()
+            }
+        }
+
         $installedVersion = $null
         $latestVersion = $null
-        if ([version]::TryParse($version, [ref]$installedVersion) -and [version]::TryParse($latest, [ref]$latestVersion) -and $installedVersion -ge $latestVersion) {
-            return @{ Action = 'None'; Reason = 'OpenCode 已是最新版'; Commands = @() }
+        $installedText = if ($version -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $version.TrimStart('v') }
+        $latestText = if ($latest -match '(\d+\.\d+\.\d+)') { $Matches[1] } else { $latest.TrimStart('v') }
+        if ([version]::TryParse($installedText, [ref]$installedVersion) -and [version]::TryParse($latestText, [ref]$latestVersion)) {
+            if ($installedVersion -ge $latestVersion) {
+                return @{ Action = 'None'; Reason = "已是最新版（v$version）"; Commands = @() }
+            }
+        } else {
+            return @{
+                Action   = 'None'
+                Reason   = "无法比较版本（已安装 v$version，最新 v$latest），保留现有版本"
+                Commands = @()
+            }
         }
     }
 
     if ($method -eq 'npm') {
-        [void]$commands.Add([string[]]@('opencode', 'upgrade', '--method', 'npm'))
         [void]$commands.Add([string[]]@('npm', 'install', '-g', '@opencode/cli@latest'))
         return @{
             Action   = 'UpdateNpm'
-            Reason   = 'npm 安装，使用 opencode upgrade --method npm'
+            Reason   = "npm 安装，直接使用 npm 更新到 v$latest"
             Commands = @($commands)
         }
     }
@@ -498,7 +653,7 @@ function Get-OpenCodeInstallPlan {
     [void]$commands.Add([string[]]@('opencode', 'upgrade'))
     return @{
         Action   = 'UpdateCurl'
-        Reason   = '使用 opencode upgrade 更新'
+        Reason   = "系统安装，使用 opencode upgrade 更新到 v$latest"
         Commands = @($commands)
     }
 }

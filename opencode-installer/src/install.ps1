@@ -1,5 +1,5 @@
 ﻿# ============================================================
-# OpenCode 一键安装器 v4.2.0
+# OpenCode 一键安装器 v4.2.1
 # 双版本：便携版（仅 MCP）/ 厚重版（PPT 双技能 + MCP）
 # 适配 OpenCode V2、DeepSeek 动态模型发现
 # ============================================================
@@ -18,7 +18,7 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::
 try { Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force } catch { $null = $_ }
 $ErrorActionPreference = 'Continue'
 
-$INSTALLER_VERSION = '4.2.0'
+$INSTALLER_VERSION = '4.2.1'
 $PAYLOAD_DIR = Join-Path $env:TEMP 'opencode-installer-v4'
 $NPM_MIRROR = 'https://registry.npmmirror.com'
 $PIP_MIRROR = 'https://pypi.tuna.tsinghua.edu.cn/simple'
@@ -304,15 +304,17 @@ function Invoke-SelfTest {
 
 function Get-NpmPrefix {
     try {
-        $prefix = & $script:NpmExe config get prefix 2>$null
-        if ($LASTEXITCODE -eq 0 -and $prefix) { return ([string]$prefix).Trim() }
+        $result = Invoke-CommandWithTimeout -FilePath $script:NpmExe -Arguments @('config', 'get', 'prefix') -TimeoutSec 15 -HeartbeatSec 0
+        if (-not $result.TimedOut -and $result.ExitCode -eq 0 -and $result.Output) { return $result.Output.Trim() }
     } catch { $null = $_ }
     return (Join-Path $env:APPDATA 'npm')
 }
 
 function Get-NpmGlobalPackages {
     try {
-        $raw = (& $script:NpmExe ls -g --depth=0 --json 2>$null) -join "`n"
+        $result = Invoke-CommandWithTimeout -FilePath $script:NpmExe -Arguments @('ls', '-g', '--depth=0', '--json') -TimeoutSec 30 -HeartbeatSec 0
+        if ($result.TimedOut) { return @() }
+        $raw = [string]$result.Output
         $start = $raw.IndexOf('{')
         if ($start -lt 0) { return @() }
         $parsed = $raw.Substring($start) | ConvertFrom-Json
@@ -602,56 +604,164 @@ function Set-NpmUserPrefix {
     if ($env:Path -notlike "*$npmPrefix*") { $env:Path = "$env:Path;$npmPrefix" }
 }
 
+function Get-RunningOpenCodeProcesses {
+    try {
+        return @(Get-Process -Name opencode -ErrorAction SilentlyContinue)
+    } catch {
+        return @()
+    }
+}
+
+function Resolve-OpenCodeExecutable {
+    foreach ($name in @('opencode.cmd', 'opencode.exe')) {
+        $command = Get-Command $name -ErrorAction SilentlyContinue
+        if ($command -and $command.CommandType -eq 'Application') { return [string]$command.Source }
+    }
+    $command = Get-Command opencode -ErrorAction SilentlyContinue
+    if ($command -and $command.CommandType -eq 'Application') { return [string]$command.Source }
+    return $null
+}
+
+function Invoke-ToolStep {
+    param(
+        [string]$Label,
+        [string]$FilePath,
+        [string[]]$Arguments,
+        [int]$TimeoutSec = 300,
+        [switch]$Quiet
+    )
+
+    if ([string]::IsNullOrWhiteSpace($FilePath)) {
+        Write-Status 'error' "$Label：未找到可执行命令"
+        return $false
+    }
+
+    if (-not $Quiet) { Write-Status 'info' "$Label（最长等待 $([int]($TimeoutSec / 60)) 分钟）..." }
+    try {
+        $result = Invoke-CommandWithTimeout -FilePath $FilePath -Arguments $Arguments -TimeoutSec $TimeoutSec -HeartbeatSec 15 -OnHeartbeat {
+            param($seconds)
+            Write-Host ("      仍在执行... {0}s" -f $seconds) -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Status 'error' "$Label 无法启动：$($_.Exception.Message)"
+        return $false
+    }
+
+    if ($result.TimedOut) {
+        Write-Status 'error' "$Label 超时（${TimeoutSec}s），已终止"
+        return $false
+    }
+    if ($result.ExitCode -ne 0) {
+        Write-Status 'error' "$Label 失败（退出码 $($result.ExitCode)）"
+        $details = (@($result.Error, $result.Output) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join "`n"
+        if ($details) {
+            foreach ($line in ($details -split "`r?`n" | Select-Object -Last 15)) {
+                if (-not [string]::IsNullOrWhiteSpace($line)) { Write-Host "      $line" -ForegroundColor DarkGray }
+            }
+        }
+        return $false
+    }
+
+    if (-not $Quiet) { Write-Status 'ok' "$Label 完成" }
+    return $true
+}
+
+function Invoke-NpmStep {
+    param(
+        [string]$Label,
+        [string[]]$Arguments,
+        [int]$TimeoutSec = 300
+    )
+
+    if (-not (Test-SafeNpmCommand -Command $script:NpmExe)) {
+        Write-Status 'error' "npm 命令不安全，无法执行：$Label"
+        return $false
+    }
+
+    return Invoke-ToolStep -Label $Label -FilePath $script:NpmExe -Arguments $Arguments -TimeoutSec $TimeoutSec
+}
+
+function Invoke-PipStep {
+    param(
+        [string]$Label,
+        [string]$PythonExe,
+        [string[]]$Arguments,
+        [int]$TimeoutSec = 600,
+        [switch]$Quiet
+    )
+
+    return Invoke-ToolStep -Label $Label -FilePath $PythonExe -Arguments $Arguments -TimeoutSec $TimeoutSec -Quiet:$Quiet
+}
+
 function Invoke-OpenCodeSetup {
     param([hashtable]$EnvInfo)
 
     $plan = Get-OpenCodeInstallPlan -State @{
-        Version   = $EnvInfo.OpenCodeVersion
-        Path      = $EnvInfo.OpenCodePath
-        NpmPrefix = $EnvInfo.NpmPrefix
-        HasV1     = $EnvInfo.HasV1
-        HasV2     = $EnvInfo.HasV2
+        Version       = $EnvInfo.OpenCodeVersion
+        Path          = $EnvInfo.OpenCodePath
+        NpmPrefix     = $EnvInfo.NpmPrefix
+        HasV1         = $EnvInfo.HasV1
+        HasV2         = $EnvInfo.HasV2
+        LatestVersion = $EnvInfo.OpenCodeLatestVersion
     }
+    if ($plan.Action -eq 'None') { Write-Status 'ok' $plan.Reason; return $true }
     Write-Status 'info' $plan.Reason
-    if ($plan.Action -eq 'None') { Write-Status 'ok' 'OpenCode 已是最新版'; return $true }
 
     if ($script:DryRun) {
         foreach ($command in $plan.Commands) { Write-Status 'plan' ('执行：' + ($command -join ' ')) }
         return $true
     }
 
+    $running = @(Get-RunningOpenCodeProcesses)
+    if ($running.Count -gt 0) {
+        Write-Status 'warn' "检测到 OpenCode 正在运行（PID $($running.Id -join ', ')）"
+        Write-Status 'info' 'Windows 无法替换正在运行的程序；请关闭所有 OpenCode 窗口后重新运行安装器。'
+        Write-Status 'info' '本次跳过 OpenCode 更新，其他组件仍会继续安装。'
+        return $true
+    }
+
     Set-NpmMirror
     Set-NpmUserPrefix
 
+    $npmInstallArgs = @('install', '-g', '@opencode/cli@latest', '--no-audit', '--no-fund', '--loglevel=error')
+
     if ($plan.Action -eq 'MigrateV1') {
         Write-Status 'info' '卸载 V1 包 opencode-ai...'
-        & $script:NpmExe uninstall -g opencode-ai 2>&1 | Out-Null
-        Write-Status 'info' '安装 V2 包 @opencode/cli...'
-        & $script:NpmExe install -g '@opencode/cli@latest' 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { Write-Status 'error' '安装 @opencode/cli 失败'; return $false }
-    } elseif ($plan.Action -eq 'UpdateNpm') {
-        Write-Status 'info' '执行 opencode upgrade --method npm...'
-        & opencode upgrade --method npm 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Status 'warn' 'opencode upgrade 失败，回退 npm 安装'
-            & $script:NpmExe install -g '@opencode/cli@latest' 2>&1 | Out-Null
-            if ($LASTEXITCODE -ne 0) { Write-Status 'error' '更新 OpenCode 失败'; return $false }
+        if (-not (Invoke-NpmStep -Label '卸载 opencode-ai' -Arguments @('uninstall', '-g', 'opencode-ai') -TimeoutSec 120)) {
+            Write-Status 'warn' 'V1 包卸载失败，继续安装 V2'
         }
+        if (-not (Invoke-NpmStep -Label '安装 @opencode/cli' -Arguments $npmInstallArgs)) { return $false }
+    } elseif ($plan.Action -eq 'UpdateNpm') {
+        if (-not (Invoke-NpmStep -Label '更新 @opencode/cli' -Arguments $npmInstallArgs)) { return $false }
     } elseif ($plan.Action -eq 'UpdateCurl') {
-        Write-Status 'info' '执行 opencode upgrade...'
-        & opencode upgrade 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { Write-Status 'error' 'opencode upgrade 失败'; return $false }
+        $opencodeExe = Resolve-OpenCodeExecutable
+        if (-not $opencodeExe) { Write-Status 'error' '未找到 opencode 命令，无法执行升级'; return $false }
+        Write-Status 'info' '执行 opencode upgrade（最长等待 5 分钟）...'
+        $result = Invoke-CommandWithTimeout -FilePath $opencodeExe -Arguments @('upgrade') -TimeoutSec 300 -HeartbeatSec 15 -OnHeartbeat {
+            param($seconds)
+            Write-Host ("      仍在执行... {0}s" -f $seconds) -ForegroundColor DarkGray
+        }
+        if ($result.TimedOut) { Write-Status 'error' 'opencode upgrade 超时（300s），已终止'; return $false }
+        if ($result.ExitCode -ne 0) {
+            Write-Status 'error' "opencode upgrade 失败（退出码 $($result.ExitCode)）"
+            $details = (@($result.Error, $result.Output) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join "`n"
+            if ($details) {
+                foreach ($line in ($details -split "`r?`n" | Select-Object -Last 15)) {
+                    if (-not [string]::IsNullOrWhiteSpace($line)) { Write-Host "      $line" -ForegroundColor DarkGray }
+                }
+            }
+            return $false
+        }
     } else {
-        Write-Status 'info' '安装 @opencode/cli...'
-        & $script:NpmExe install -g '@opencode/cli@latest' 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { Write-Status 'error' '安装 OpenCode 失败'; return $false }
+        if (-not (Invoke-NpmStep -Label '安装 @opencode/cli' -Arguments $npmInstallArgs)) { return $false }
     }
 
     Update-ProcessPath
     $version = Get-OpenCodeVersion
     if ($version) {
         Write-Status 'ok' "OpenCode 已就绪（$version）"
-        try { & opencode service restart 2>&1 | Out-Null } catch { $null = $_ }
+        $opencodeExe = Resolve-OpenCodeExecutable
+        if ($opencodeExe) { try { Invoke-CommandWithTimeout -FilePath $opencodeExe -Arguments @('service', 'restart') -TimeoutSec 30 -HeartbeatSec 0 | Out-Null } catch { $null = $_ } }
         return $true
     }
     Write-Status 'warn' 'OpenCode 命令暂未生效，请重开终端后验证'
@@ -755,7 +865,7 @@ function Read-DeepSeekConfig {
             $mark = if ($models[$i] -eq $defaultModel) { '（推荐）' } else { '' }
             Write-Host ("      [{0}] {1} {2}" -f ($i + 1), $models[$i], $mark)
         }
-        $choice = Read-Host "  选择默认模型 [1-$($models.Count)，回车使用推荐]"
+        $choice = ConvertTo-MenuInput -Text (Read-Host "  选择默认模型 [1-$($models.Count)，回车使用推荐]")
         if (-not [string]::IsNullOrWhiteSpace($choice) -and $choice -match '^\d+$') {
             $index = [int]$choice
             if ($index -ge 1 -and $index -le $models.Count) { $mainModel = $models[$index - 1] }
@@ -787,20 +897,20 @@ function Read-CustomProviderConfig {
     }
 
     Write-Host ''
-    $providerId = Read-Host '  Provider ID（英文，如 siliconflow）'
-    $providerId = ([string]$providerId).Trim().ToLowerInvariant()
+    $providerId = ConvertTo-MenuInput -Text (Read-Host '  Provider ID（英文，如 siliconflow）')
+    $providerId = $providerId.ToLowerInvariant()
     if ($providerId -notmatch '^[a-z0-9][a-z0-9-_]*$') {
         Write-Status 'error' 'Provider ID 格式不正确（只能包含小写字母、数字、- 和 _）'
         return $null
     }
-    $providerName = Read-Host '  显示名称（中文，如 硅基流动）'
+    $providerName = ([string](Read-Host '  显示名称（中文，如 硅基流动）')).Trim()
     if ([string]::IsNullOrWhiteSpace($providerName)) { $providerName = $providerId }
-    $baseUrl = Read-Host '  API 地址（如 https://api.siliconflow.cn/v1）'
+    $baseUrl = ConvertTo-MenuInput -Text (Read-Host '  API 地址（如 https://api.siliconflow.cn/v1）')
     if ([string]::IsNullOrWhiteSpace($baseUrl)) {
         Write-Status 'error' 'API 地址不能为空'
         return $null
     }
-    $baseUrl = ([string]$baseUrl).Trim().TrimEnd('/')
+    $baseUrl = $baseUrl.TrimEnd('/')
     $apiKey = Read-SecretText 'API Key（可留空，输入不显示）'
     if ($apiKey) { $apiKey = $apiKey.Trim() }
 
@@ -820,7 +930,7 @@ function Read-CustomProviderConfig {
             $mark = if ($models[$i] -eq $defaultModel) { '（推荐）' } else { '' }
             Write-Host ("      [{0}] {1} {2}" -f ($i + 1), $models[$i], $mark)
         }
-        $choice = Read-Host "  选择默认模型 [1-$($models.Count)，回车使用推荐]"
+        $choice = ConvertTo-MenuInput -Text (Read-Host "  选择默认模型 [1-$($models.Count)，回车使用推荐]")
         if (-not [string]::IsNullOrWhiteSpace($choice) -and $choice -match '^\d+$') {
             $index = [int]$choice
             if ($index -ge 1 -and $index -le $models.Count) { $mainModel = $models[$index - 1] }
@@ -900,7 +1010,8 @@ function Install-SkillPythonDependencies {
     param([hashtable]$Skill)
 
     if (-not $Skill.NeedsPip) { return $true }
-    if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $pythonCommand) {
         Write-Status 'warn' '未检测到 Python，跳过依赖安装（安装 Python 后重跑安装器即可补齐）'
         return $false
     }
@@ -908,17 +1019,18 @@ function Install-SkillPythonDependencies {
     if (-not (Test-Path -LiteralPath $requirements)) { return $true }
     if ($script:DryRun) { Write-Status 'plan' "pip install -r $requirements（清华源）"; return $true }
 
-    Write-Status 'info' '正在安装 PPT Python 依赖（约几分钟，请耐心等待）...'
+    $pythonExe = if ($pythonCommand.Source) { [string]$pythonCommand.Source } else { 'python' }
     $pipArgs = Get-PipInstallArguments -RequirementsPath $requirements -IndexUrl $script:PipMirror
-    & python @pipArgs
-    if ($LASTEXITCODE -ne 0) {
+    if (-not (Invoke-PipStep -Label '安装 PPT Python 依赖' -PythonExe $pythonExe -Arguments $pipArgs)) {
         Write-Status 'warn' '镜像安装失败，尝试默认源...'
         $fallbackArgs = Get-PipInstallArguments -RequirementsPath $requirements -IndexUrl ''
-        & python @fallbackArgs
+        if (-not (Invoke-PipStep -Label '安装 PPT Python 依赖（默认源）' -PythonExe $pythonExe -Arguments $fallbackArgs)) {
+            Write-Status 'warn' "依赖安装未完成，可稍后手动执行：python -m pip install -r `"$requirements`""
+            return $false
+        }
     }
-    if ($LASTEXITCODE -eq 0) { Write-Status 'ok' 'Python 依赖安装完成'; return $true }
-    Write-Status 'warn' "依赖安装未完成，可稍后手动执行：python -m pip install -r `"$requirements`""
-    return $false
+    Write-Status 'ok' 'Python 依赖安装完成'
+    return $true
 }
 
 function Get-McpPython {
@@ -928,8 +1040,8 @@ function Get-McpPython {
     $venvPython = Join-Path $script:VenvDir 'Scripts\python.exe'
     if (Test-Path -LiteralPath $venvPython) {
         try {
-            & $venvPython --version 2>$null | Out-Null
-            if ($LASTEXITCODE -eq 0) { return $venvPython }
+            $probe = Invoke-CommandWithTimeout -FilePath $venvPython -Arguments @('--version') -TimeoutSec 15 -HeartbeatSec 0
+            if (-not $probe.TimedOut -and $probe.ExitCode -eq 0) { return $venvPython }
         } catch { $null = $_ }
         Remove-Item -LiteralPath $script:VenvDir -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -938,9 +1050,11 @@ function Get-McpPython {
         return $venvPython
     }
     try {
-        Write-Status 'info' '创建 MCP 独立 Python 环境...'
-        & python -m venv $script:VenvDir 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw 'python -m venv 失败' }
+        $pythonCommand = Get-Command python -ErrorAction Stop
+        $pythonExe = if ($pythonCommand.Source) { [string]$pythonCommand.Source } else { 'python' }
+        if (-not (Invoke-PipStep -Label '创建 MCP 独立 Python 环境' -PythonExe $pythonExe -Arguments @('-m', 'venv', $script:VenvDir) -TimeoutSec 180)) {
+            throw 'python -m venv 失败'
+        }
         return $venvPython
     } catch {
         Write-Status 'warn' "独立环境创建失败，回退全局 Python：$($_.Exception.Message)"
@@ -967,20 +1081,23 @@ function Install-McpPackage {
         }
     }
 
-    Write-Status 'info' "安装 $($Mcp.Display)..."
-    & $PythonExe -m pip install --upgrade $packageRoot -i $script:PipMirror 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    $installArgs = @('-m', 'pip', 'install', '--upgrade', $packageRoot, '-i', $script:PipMirror)
+    if (-not (Invoke-PipStep -Label "安装 $($Mcp.Display)" -PythonExe $PythonExe -Arguments $installArgs)) {
         Write-Status 'warn' '镜像安装失败，尝试默认源...'
-        & $PythonExe -m pip install --upgrade $packageRoot 2>&1 | Out-Null
+        if (-not (Invoke-PipStep -Label "安装 $($Mcp.Display)（默认源）" -PythonExe $PythonExe -Arguments @('-m', 'pip', 'install', '--upgrade', $packageRoot))) {
+            Write-Status 'error' "$($Mcp.Display) 安装失败"
+            return $false
+        }
     }
-    if ($LASTEXITCODE -ne 0) { Write-Status 'error' "$($Mcp.Display) 安装失败"; return $false }
 
     # 同版本重跑时 pip 可能跳过安装；强制刷新本地包代码（不重装依赖）
-    & $PythonExe -m pip install --upgrade --force-reinstall --no-deps $packageRoot 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { Write-Status 'warn' "$($Mcp.Display) 代码刷新失败，当前可能是旧版本" }
+    if (-not (Invoke-PipStep -Label "刷新 $($Mcp.Display) 代码" -PythonExe $PythonExe -Arguments @('-m', 'pip', 'install', '--upgrade', '--force-reinstall', '--no-deps', $packageRoot) -Quiet)) {
+        Write-Status 'warn' "$($Mcp.Display) 代码刷新失败，当前可能是旧版本"
+    }
 
-    & $PythonExe -c "import $($Mcp.Module)" 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) { Write-Status 'warn' "$($Mcp.Display) 已安装，但模块导入检查失败" }
+    if (-not (Invoke-PipStep -Label "检查 $($Mcp.Display) 导入" -PythonExe $PythonExe -Arguments @('-c', "import $($Mcp.Module)") -TimeoutSec 60 -Quiet)) {
+        Write-Status 'warn' "$($Mcp.Display) 已安装，但模块导入检查失败"
+    }
     return $true
 }
 
@@ -1030,14 +1147,27 @@ function Read-ComponentSelection {
             $mark = if ($items[$i].Selected) { '✓' } else { ' ' }
             Write-Host ("      [{0}] [{1}] {2}" -f ($i + 1), $mark, $items[$i].Display)
         }
-        $answer = Read-Host '  你的选择'
+        $answer = ConvertTo-MenuInput -Text (Read-Host '  你的选择')
         if ([string]::IsNullOrWhiteSpace($answer)) { return $items }
-        if ($answer.Trim().ToLowerInvariant() -eq 'a') { $items | ForEach-Object { $_.Selected = $true }; continue }
-        if ($answer.Trim().ToLowerInvariant() -eq 'n') { $items | ForEach-Object { $_.Selected = $false }; continue }
+        if ($answer.ToLowerInvariant() -eq 'a') {
+            $items | ForEach-Object { $_.Selected = $true }
+            Write-Status 'ok' '已全选；再按一次回车开始安装'
+            continue
+        }
+        if ($answer.ToLowerInvariant() -eq 'n') {
+            $items | ForEach-Object { $_.Selected = $false }
+            Write-Status 'info' '已全部取消；再按一次回车开始（将跳过组件）'
+            continue
+        }
+        $changed = $false
         foreach ($token in ($answer -split '[^\d]+' | Where-Object { $_ })) {
             $index = [int]$token - 1
-            if ($index -ge 0 -and $index -lt $items.Count) { $items[$index].Selected = -not $items[$index].Selected }
+            if ($index -ge 0 -and $index -lt $items.Count) {
+                $items[$index].Selected = -not $items[$index].Selected
+                $changed = $true
+            }
         }
+        if (-not $changed) { Write-Status 'warn' '请输入序号、a、n，或直接回车开始' }
     }
 }
 
@@ -1166,18 +1296,19 @@ function Get-EnvironmentInfo {
 
     $packages = @(Get-NpmGlobalPackages)
     return @{
-        OsCaption       = Get-OsCaption
-        NodeVersion     = Get-NodeVersion
-        PythonVersion   = Get-PythonVersion
-        OpenCodeVersion = Get-OpenCodeVersion
-        OpenCodePath    = Get-OpenCodePath
-        NpmPrefix       = Get-NpmPrefix
-        HasV1           = ($packages -contains 'opencode-ai')
-        HasV2           = ($packages -contains '@opencode/cli')
-        ConfigValid     = $configValid
-        ProviderStyle   = $providerStyle
-        McpStyle        = $mcpStyle
-        PermissionStyle = $permissionStyle
+        OsCaption             = Get-OsCaption
+        NodeVersion           = Get-NodeVersion
+        PythonVersion         = Get-PythonVersion
+        OpenCodeVersion       = Get-OpenCodeVersion
+        OpenCodeLatestVersion = Get-OpenCodeLatestVersion -Registries @($script:NpmMirror, 'https://registry.npmjs.org')
+        OpenCodePath          = Get-OpenCodePath
+        NpmPrefix             = Get-NpmPrefix
+        HasV1                 = ($packages -contains 'opencode-ai')
+        HasV2                 = ($packages -contains '@opencode/cli')
+        ConfigValid           = $configValid
+        ProviderStyle         = $providerStyle
+        McpStyle              = $mcpStyle
+        PermissionStyle       = $permissionStyle
     }
 }
 
@@ -1232,7 +1363,8 @@ function Show-PlanSummary {
     if ($pwshVersion) { Write-Status 'ok' "PowerShell 7 已安装（$pwshVersion）" }
     elseif (Test-GitBashEnvironment) { Write-Status 'plan' 'PowerShell 7：跳过（检测到 Git Bash）' }
     else { Write-Status 'plan' "PowerShell 7：可选安装 $($script:PowerShell7Version)（用户目录，无需管理员）" }
-    Write-Status 'plan' "OpenCode：$($Plan.Reason)"
+    if ($Plan.Action -eq 'None') { Write-Status 'ok' "OpenCode：$($Plan.Reason)" }
+    else { Write-Status 'plan' "OpenCode：$($Plan.Reason)" }
     Write-Status 'plan' 'DeepSeek：安装时调用 /models 动态获取模型'
     $names = @($script:EnabledComponents | ForEach-Object { $script:ComponentCatalog[$_] })
     Write-Status 'plan' ('组件：' + ($names -join '、'))
@@ -1317,6 +1449,7 @@ function Main {
     Write-Status 'info' "PowerShell：$($PSVersionTable.PSVersion) / npm：$($script:NpmExe)"
     if ($script:DryRun) { Write-Status 'info' 'DryRun 模式：只显示计划，不修改系统' }
 
+    Write-Status 'info' '正在检查环境与 OpenCode 最新版...'
     $envInfo = Get-EnvironmentInfo
     Show-Preflight -EnvInfo $envInfo
     Show-NetworkAdvice
@@ -1348,11 +1481,12 @@ function Main {
     }
 
     $plan = Get-OpenCodeInstallPlan -State @{
-        Version   = $envInfo.OpenCodeVersion
-        Path      = $envInfo.OpenCodePath
-        NpmPrefix = $envInfo.NpmPrefix
-        HasV1     = $envInfo.HasV1
-        HasV2     = $envInfo.HasV2
+        Version       = $envInfo.OpenCodeVersion
+        Path          = $envInfo.OpenCodePath
+        NpmPrefix     = $envInfo.NpmPrefix
+        HasV1         = $envInfo.HasV1
+        HasV2         = $envInfo.HasV2
+        LatestVersion = $envInfo.OpenCodeLatestVersion
     }
     Show-PlanSummary -EnvInfo $envInfo -Plan $plan
     if (-not $script:DryRun) {
@@ -1412,9 +1546,19 @@ function Main {
             Write-Host '  请选择 AI 服务：' -ForegroundColor Gray
             Write-Host '      [1] DeepSeek（推荐 · 国内直连 · 动态获取模型）'
             Write-Host '      [2] 其他 OpenAI 兼容 API'
-            $choice = Read-Host '  请输入 1 或 2'
-            if ($choice -eq '1') { $aiInfo = Read-DeepSeekConfig -ConfigJson $script:ConfigJson }
-            else { $aiInfo = Read-CustomProviderConfig -ConfigJson $script:ConfigJson }
+            $aiProvider = $null
+            while (-not $aiProvider) {
+                $choice = Read-Host '  请输入 1 或 2（直接回车 = 1）'
+                $aiProvider = Resolve-AiProviderChoice -Choice $choice
+                if (-not $aiProvider) { Write-Status 'warn' '请输入 1（DeepSeek）或 2（其他 OpenAI 兼容 API）' }
+            }
+            if ($aiProvider -eq 'deepseek') {
+                Write-Status 'info' '已选择：DeepSeek'
+                $aiInfo = Read-DeepSeekConfig -ConfigJson $script:ConfigJson
+            } else {
+                Write-Status 'info' '已选择：其他 OpenAI 兼容 API'
+                $aiInfo = Read-CustomProviderConfig -ConfigJson $script:ConfigJson
+            }
             if ($aiInfo -and $aiInfo.Patch) {
                 $script:ConfigJson = Merge-OpenCodeConfigJson -ConfigJson $script:ConfigJson -PatchJson $aiInfo.Patch
                 Write-Status 'ok' "AI 模型已配置：$($aiInfo.Provider) / $($aiInfo.MainModel)"

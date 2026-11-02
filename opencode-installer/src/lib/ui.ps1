@@ -73,9 +73,9 @@ function Confirm-YesNo {
 
     $suffix = if ($Default) { '(Y/n)' } else { '(y/N)' }
     while ($true) {
-        $answer = Read-Host "  $Question $suffix"
+        $answer = ConvertTo-MenuInput -Text (Read-Host "  $Question $suffix")
         if ([string]::IsNullOrWhiteSpace($answer)) { return $Default }
-        switch ($answer.Trim().ToLowerInvariant()) {
+        switch ($answer.ToLowerInvariant()) {
             'y' { return $true }
             'yes' { return $true }
             'n' { return $false }

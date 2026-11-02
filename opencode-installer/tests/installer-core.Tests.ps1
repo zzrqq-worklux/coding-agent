@@ -619,14 +619,22 @@ Describe 'Get-OpenCodeInstallPlan' {
         $p.Commands[0][3] | Should Be 'opencode-ai'
         $p.Commands[1][3] | Should Be '@opencode/cli@latest'
     }
-    It 'updates an npm-managed V2 install' {
+    It 'updates an npm-managed V2 install directly with npm' {
+        $p = Get-OpenCodeInstallPlan -State @{
+            Version = '2.2.2'; Path = 'C:\npm\opencode.cmd'; NpmPrefix = 'C:\npm'; HasV1 = $false; HasV2 = $true
+            LatestVersion = '2.2.5'
+        }
+        $p.Action | Should Be 'UpdateNpm'
+        $p.Commands[0][0] | Should Be 'npm'
+        $p.Commands[0][1] | Should Be 'install'
+        $p.Commands[0][3] | Should Be '@opencode/cli@latest'
+    }
+    It 'does not update when the latest version cannot be checked' {
         $p = Get-OpenCodeInstallPlan -State @{
             Version = '2.2.2'; Path = 'C:\npm\opencode.cmd'; NpmPrefix = 'C:\npm'; HasV1 = $false; HasV2 = $true
         }
-        $p.Action | Should Be 'UpdateNpm'
-        $p.Commands[0][0] | Should Be 'opencode'
-        $p.Commands[0][1] | Should Be 'upgrade'
-        $p.Commands[0][3] | Should Be 'npm'
+        $p.Action | Should Be 'None'
+        $p.Commands.Count | Should Be 0
     }
     It 'reinstalls when the V2 package exists but the opencode command is missing' {
         $p = Get-OpenCodeInstallPlan -State @{
@@ -645,6 +653,7 @@ Describe 'Get-OpenCodeInstallPlan' {
     It 'updates a curl-managed V2 install' {
         $p = Get-OpenCodeInstallPlan -State @{
             Version = '2.2.2'; Path = 'C:\Users\me\.opencode\bin\opencode.exe'; NpmPrefix = 'C:\npm'; HasV1 = $false; HasV2 = $true
+            LatestVersion = '2.2.5'
         }
         $p.Action | Should Be 'UpdateCurl'
         $p.Commands[0][0] | Should Be 'opencode'
@@ -656,6 +665,77 @@ Describe 'Get-OpenCodeInstallPlan' {
         }
         $p.Action | Should Be 'None'
         $p.Commands.Count | Should Be 0
+    }
+}
+
+Describe 'Get-OpenCodeLatestVersion' {
+    It 'reads the version from the first registry' {
+        $result = Get-OpenCodeLatestVersion -Fetch { param($url, $timeout) [pscustomobject]@{ version = '2.2.5' } }
+        $result | Should Be '2.2.5'
+    }
+    It 'falls back to the next registry when one fails' {
+        $result = Get-OpenCodeLatestVersion -Registries @('https://bad.example', 'https://good.example') -Fetch {
+            param($url, $timeout)
+            if ($url -like '*bad.example*') { throw 'blocked' }
+            [pscustomobject]@{ version = 'v2.2.5' }
+        }
+        $result | Should Be '2.2.5'
+    }
+    It 'returns null when every registry fails' {
+        $result = Get-OpenCodeLatestVersion -Fetch { param($url, $timeout) throw 'offline' }
+        $result | Should Be $null
+    }
+}
+
+Describe 'ConvertTo-MenuInput' {
+    It 'trims and normalizes full-width digits' {
+        ConvertTo-MenuInput -Text ' １ ' | Should Be '1'
+    }
+    It 'normalizes full-width letters' {
+        ConvertTo-MenuInput -Text 'Ａ' | Should Be 'A'
+    }
+    It 'removes control characters' {
+        ConvertTo-MenuInput -Text ("a" + [char]0) | Should Be 'a'
+    }
+    It 'returns an empty string for null input' {
+        ConvertTo-MenuInput -Text $null | Should Be ''
+    }
+}
+
+Describe 'Resolve-AiProviderChoice' {
+    It 'maps 1 to DeepSeek' {
+        Resolve-AiProviderChoice -Choice '1' | Should Be 'deepseek'
+    }
+    It 'maps 2 to the custom provider' {
+        Resolve-AiProviderChoice -Choice '2' | Should Be 'custom'
+    }
+    It 'trims surrounding whitespace' {
+        Resolve-AiProviderChoice -Choice ' 2 ' | Should Be 'custom'
+    }
+    It 'defaults an empty answer to DeepSeek' {
+        Resolve-AiProviderChoice -Choice '' | Should Be 'deepseek'
+    }
+    It 'accepts full-width digits' {
+        Resolve-AiProviderChoice -Choice '１' | Should Be 'deepseek'
+    }
+    It 'ignores control characters added by the console host' {
+        Resolve-AiProviderChoice -Choice ("1" + [char]0) | Should Be 'deepseek'
+    }
+    It 'returns null for invalid input' {
+        Resolve-AiProviderChoice -Choice 'x' | Should Be $null
+    }
+}
+
+Describe 'Invoke-CommandWithTimeout' {
+    It 'captures the output and exit code of a quick command' {
+        $result = Invoke-CommandWithTimeout -FilePath $env:ComSpec -Arguments @('/d', '/s', '/c', 'echo hello') -TimeoutSec 10
+        $result.TimedOut | Should Be $false
+        $result.ExitCode | Should Be 0
+        $result.Output.Trim() | Should Be 'hello'
+    }
+    It 'kills a command that exceeds the timeout' {
+        $result = Invoke-CommandWithTimeout -FilePath $env:ComSpec -Arguments @('/d', '/s', '/c', 'ping -n 10 127.0.0.1 >nul') -TimeoutSec 1 -HeartbeatSec 0
+        $result.TimedOut | Should Be $true
     }
 }
 

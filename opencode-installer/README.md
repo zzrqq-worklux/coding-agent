@@ -1,4 +1,4 @@
-# OpenCode 一键安装器 v4.2.0
+# OpenCode 一键安装器 v4.2.1
 
 面向国内零基础用户的 OpenCode 安装器（Windows 10/11，简体中文，管理员/普通用户双模式）。
 
@@ -21,6 +21,15 @@
 - **Excel MCP 复用本机名称**：配置项使用 `my-excel`，不会和已有的 Excel MCP 重复。
 - **TUI 重做**：环境预检、执行计划确认、分步进度、最终报告、转录日志。
 - **内置组件更新**：PPT-Master 升到 6.7.3（本机 Kobold 副本打包，排除 `.env`）；Outlook / Excel MCP 使用本机更新后的源码。
+
+## v4.2.1 安装计划与输入修复
+
+- **不再重复安装已是最新的 OpenCode**：安装计划会查询 npm 最新版；已是最新版时直接跳过，不再执行 `opencode upgrade` / npm 安装。查询失败时保留现有版本，避免网络异常导致重装卡住。
+- **npm 更新改为直接执行**：npm 安装的 OpenCode 不再先跑 `opencode upgrade --method npm`，避免自升级进程和回退 npm 互相等待；npm 安装带超时、进度提示和失败日志。
+- **检测到 OpenCode 正在运行**：Windows 无法替换正在运行的 exe，安装器会提示先关闭 OpenCode，并跳过本次 OpenCode 更新，继续安装其他组件。
+- **中文输入法 / 全角输入兼容**：AI 服务选择、模型选择、组件选择、Y/N 确认统一做去空白、去控制字符、全角转半角；输入 1 不会再误进“其他 OpenAI 兼容 API”。
+- **组件菜单反馈**：按 `a` / `n` 后明确提示“再按一次回车开始”，避免全选后看起来没反应。
+- 单测增加到 170 个（Windows PowerShell 5.1 下全部通过）。
 
 ## v4.2.0 快捷方式、DeepSeek 费用与 Claude 风格教程
 
@@ -64,7 +73,7 @@ opencode-installer/
 │     ├─ guizang-ppt-skill/            # 归藏技能源目录（构建时打包）
 │     ├─ outlook-mcp/                  # 本机新版 Outlook MCP 源码
 │     └─ excel-mcp/                    # 本机新版 Excel MCP 源码
-├─ tests/installer-core.Tests.ps1 # Pester 单测（153 个）
+├─ tests/installer-core.Tests.ps1 # Pester 单测（170 个）
 ├─ build/
 │  ├─ build.ps1                   # 单测 → 打包 → 编译 → 资源校验 → 冒烟 →（可选）签名
 │  ├─ vendor/ps2exe.ps1           # PS2EXE 编译器（离线构建用，MS-LPL）
@@ -102,7 +111,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -Sign -PfxPath D:\cert\
 - `build/release/opencode安装器-便携版.zip`
 - `build/release/opencode安装器-厚重版.zip`
 
-构建流程自带验证：**153 个单测** → **资源打包** → **exe 编译** → **内嵌资源校验** → **`-DryRun` 冒烟测试** → **`-SelfTest` 自检** → **发布目录/zip 打包**，任一失败即中止构建。`-NoPackage` 可跳过最后的发布打包。
+构建流程自带验证：**170 个单测** → **资源打包** → **exe 编译** → **内嵌资源校验** → **`-DryRun` 冒烟测试** → **`-SelfTest` 自检** → **发布目录/zip 打包**，任一失败即中止构建。`-NoPackage` 可跳过最后的发布打包。
 
 ## 安装器行为
 
@@ -112,7 +121,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -Sign -PfxPath D:\cert\
 4. **OpenCode V2**：
    - 未安装 → `npm install -g @opencode/cli@latest`
    - V1 → 卸载 `opencode-ai`，安装 `@opencode/cli`
-   - V2 npm 安装 → `opencode upgrade --method npm`，失败回退 npm
+   - V2 npm 安装 → 查询最新版；需要更新时直接 `npm install -g @opencode/cli@latest`（带超时/进度）
    - V2 curl 安装 → `opencode upgrade`
 5. **AI 模型**：
    - DeepSeek：输入 Key（掩码）→ 调 `/models` 动态获取模型 → 选择默认模型 → Key 存到 `~/.config/opencode/.secrets/deepseek-api-key`，配置用 `{file:...}` 引用。
