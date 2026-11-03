@@ -1,5 +1,5 @@
 ﻿# ============================================================
-# OpenCode 一键安装器 v4.2.1
+# OpenCode 一键安装器 v4.2.2
 # 双版本：便携版（仅 MCP）/ 厚重版（PPT 双技能 + MCP）
 # 适配 OpenCode V2、DeepSeek 动态模型发现
 # ============================================================
@@ -18,7 +18,7 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::
 try { Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force } catch { $null = $_ }
 $ErrorActionPreference = 'Continue'
 
-$INSTALLER_VERSION = '4.2.1'
+$INSTALLER_VERSION = '4.2.2'
 $PAYLOAD_DIR = Join-Path $env:TEMP 'opencode-installer-v4'
 $NPM_MIRROR = 'https://registry.npmmirror.com'
 $PIP_MIRROR = 'https://pypi.tuna.tsinghua.edu.cn/simple'
@@ -94,7 +94,7 @@ $script:SkillsDir = Join-Path $script:ConfigRoot 'skills'
 $script:ConfigFile = Join-Path $script:ConfigRoot 'opencode.json'
 $script:ManifestPath = Join-Path $script:ConfigRoot 'installer-manifest.json'
 $script:McpDir = Join-Path $script:ConfigRoot 'mcp-servers'
-$script:VenvDir = Join-Path $script:McpDir 'venv'
+# 每个 MCP 使用独立 venv（venv-excel / venv-outlook），避免 mcp / fastmcp 版本互相破坏
 $script:SecretsDir = Join-Path $script:ConfigRoot '.secrets'
 $script:LogFile = Join-Path $env:TEMP ("opencode-installer-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + ".log")
 
@@ -119,22 +119,22 @@ $script:GuiZang = @{
     Credit    = '归藏网页 PPT by 歸藏 · AGPL-3.0 · github.com/op7418/guizang-ppt-skill'
 }
 $script:OutlookMcp = @{
-    Key        = 'outlook'
-    Name       = 'outlook'
-    Display    = 'Outlook 邮件助手（本机 Outlook COM，免云端认证）'
-    Zip        = 'outlook-mcp.zip'
-    PackageDir = 'outlook-mcp'
-    Module     = 'outlook_com_mcp'
-    Version    = '0.1.0'
+    Key         = 'outlook'
+    Name        = 'outlook'
+    Display     = 'Outlook 邮件助手（本机 Outlook COM，免云端认证）'
+    Zip         = 'outlook-mcp.zip'
+    PackageDir  = 'outlook-mcp'
+    ProbeModule = 'outlook_com_mcp.server'
+    Version     = '0.1.0'
 }
 $script:ExcelMcp = @{
-    Key        = 'excel'
-    Name       = 'my-excel'
-    Display    = 'Excel 表格助手（读写 / 计算 / 图表 / 数据清洗）'
-    Zip        = 'excel-mcp.zip'
-    PackageDir = 'excel-mcp'
-    Module     = 'excel_mcp'
-    Version    = '0.1.8.post1'
+    Key         = 'excel'
+    Name        = 'my-excel'
+    Display     = 'Excel 表格助手（读写 / 计算 / 图表 / 数据清洗）'
+    Zip         = 'excel-mcp.zip'
+    PackageDir  = 'excel-mcp'
+    ProbeModule = 'excel_mcp.server'
+    Version     = '0.1.8.post1'
 }
 $script:ComponentCatalog = @{
     'ppt-master' = $script:PptMaster.Display
@@ -241,7 +241,7 @@ function Test-InstallerEnvironment {
     $required = @(
         'Resolve-NpmExecutable', 'Test-SafeNpmCommand', 'Get-OpenCodeInstallPlan', 'Get-ProxyConfiguration', 'Test-UrlConnectivity',
         'Test-GitBashEnvironment', 'Get-PowerShell7Version', 'Get-PowerShell7DownloadUrls', 'Get-PowerShell7LocalZipCandidates', 'Test-FileSha256',
-        'Get-OpenCodeLauncherContent', 'New-OpenCodeShortcut'
+        'Get-OpenCodeLauncherContent', 'New-OpenCodeShortcut', 'Get-McpVenvDir', 'Expand-McpPackage'
     )
     $missing = @($required | Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) })
     [void]$checks.Add([pscustomobject]@{
@@ -1034,30 +1034,31 @@ function Install-SkillPythonDependencies {
 }
 
 function Get-McpPython {
-    param([bool]$HasPython)
+    param([hashtable]$Mcp, [bool]$HasPython)
 
     if (-not $HasPython) { return $null }
-    $venvPython = Join-Path $script:VenvDir 'Scripts\python.exe'
+    $venvDir = Get-McpVenvDir -McpRoot $script:McpDir -Key $Mcp.Key
+    $venvPython = Join-Path $venvDir 'Scripts\python.exe'
     if (Test-Path -LiteralPath $venvPython) {
         try {
             $probe = Invoke-CommandWithTimeout -FilePath $venvPython -Arguments @('--version') -TimeoutSec 15 -HeartbeatSec 0
             if (-not $probe.TimedOut -and $probe.ExitCode -eq 0) { return $venvPython }
         } catch { $null = $_ }
-        Remove-Item -LiteralPath $script:VenvDir -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $venvDir -Recurse -Force -ErrorAction SilentlyContinue
     }
     if ($script:DryRun) {
-        Write-Status 'plan' "创建 MCP 独立环境：$($script:VenvDir)"
+        Write-Status 'plan' "创建 $($Mcp.Name) 独立环境：$venvDir"
         return $venvPython
     }
     try {
         $pythonCommand = Get-Command python -ErrorAction Stop
         $pythonExe = if ($pythonCommand.Source) { [string]$pythonCommand.Source } else { 'python' }
-        if (-not (Invoke-PipStep -Label '创建 MCP 独立 Python 环境' -PythonExe $pythonExe -Arguments @('-m', 'venv', $script:VenvDir) -TimeoutSec 180)) {
+        if (-not (Invoke-PipStep -Label "创建 $($Mcp.Name) 独立 Python 环境" -PythonExe $pythonExe -Arguments @('-m', 'venv', $venvDir) -TimeoutSec 180)) {
             throw 'python -m venv 失败'
         }
         return $venvPython
     } catch {
-        Write-Status 'warn' "独立环境创建失败，回退全局 Python：$($_.Exception.Message)"
+        Write-Status 'warn' "$($Mcp.Name) 独立环境创建失败，回退全局 Python：$($_.Exception.Message)"
         return 'python'
     }
 }
@@ -1072,13 +1073,15 @@ function Install-McpPackage {
     }
 
     $packageRoot = Join-Path $script:PayloadRoot $Mcp.PackageDir
-    if (-not (Test-Path -LiteralPath $packageRoot)) {
-        $zip = Join-Path $script:PayloadRoot $Mcp.Zip
-        if (-not (Test-Path -LiteralPath $zip)) { Write-Status 'error' "缺少 $($Mcp.Zip)"; return $false }
-        try { Expand-ZipPackage -ZipPath $zip -Destination $packageRoot } catch {
-            Write-Status 'error' "解压 $($Mcp.Zip) 失败：$($_.Exception.Message)"
+    try {
+        # 有 zip 时必须重新解压，否则会复用 %TEMP% 里旧版本的源码
+        if (-not (Expand-McpPackage -ZipPath (Join-Path $script:PayloadRoot $Mcp.Zip) -PackageRoot $packageRoot)) {
+            Write-Status 'error' "缺少 $($Mcp.PackageDir) 源码包"
             return $false
         }
+    } catch {
+        Write-Status 'error' "解压 $($Mcp.Zip) 失败：$($_.Exception.Message)"
+        return $false
     }
 
     $installArgs = @('-m', 'pip', 'install', '--upgrade', $packageRoot, '-i', $script:PipMirror)
@@ -1095,9 +1098,30 @@ function Install-McpPackage {
         Write-Status 'warn' "$($Mcp.Display) 代码刷新失败，当前可能是旧版本"
     }
 
-    if (-not (Invoke-PipStep -Label "检查 $($Mcp.Display) 导入" -PythonExe $PythonExe -Arguments @('-c', "import $($Mcp.Module)") -TimeoutSec 60 -Quiet)) {
-        Write-Status 'warn' "$($Mcp.Display) 已安装，但模块导入检查失败"
+    # 只导入包本身会漏掉真正启动失败的 server 模块；这里导入实际入口
+    $probeModule = [string]$Mcp.ProbeModule
+    if ([string]::IsNullOrWhiteSpace($probeModule)) {
+        Write-Status 'error' "$($Mcp.Display) 缺少启动探针模块"
+        return $false
     }
+    $probeArgs = @('-c', "import $probeModule")
+    if (-not (Invoke-PipStep -Label "启动检查 $($Mcp.Display)" -PythonExe $PythonExe -Arguments $probeArgs -TimeoutSec 60 -Quiet)) {
+        Write-Status 'warn' "$($Mcp.Display) 启动检查失败，尝试强制重装依赖..."
+        $repairArgs = @('-m', 'pip', 'install', '--upgrade', '--force-reinstall', $packageRoot, '-i', $script:PipMirror)
+        if (-not (Invoke-PipStep -Label "修复 $($Mcp.Display) 依赖" -PythonExe $PythonExe -Arguments $repairArgs)) {
+            Write-Status 'warn' '镜像修复失败，尝试默认源...'
+            $repairArgs = @('-m', 'pip', 'install', '--upgrade', '--force-reinstall', $packageRoot)
+            if (-not (Invoke-PipStep -Label "修复 $($Mcp.Display) 依赖（默认源）" -PythonExe $PythonExe -Arguments $repairArgs)) {
+                Write-Status 'error' "$($Mcp.Display) 依赖修复失败"
+                return $false
+            }
+        }
+        if (-not (Invoke-PipStep -Label "复检 $($Mcp.Display)" -PythonExe $PythonExe -Arguments $probeArgs -TimeoutSec 60 -Quiet)) {
+            Write-Status 'error' "$($Mcp.Display) 启动检查仍失败，已跳过配置（避免 OpenCode 报 MCP server failed）"
+            return $false
+        }
+    }
+    Write-Status 'ok' "$($Mcp.Display) 启动检查通过"
     return $true
 }
 
@@ -1200,31 +1224,28 @@ function Install-Components {
         $results += @{ Key = 'guizang'; Ok = $ok; Label = '归藏网页 PPT'; Detail = if ($ok) { '已部署' } else { '部署失败' } }
     }
 
-    $pythonExe = $null
-    if ($selected -contains 'outlook' -or $selected -contains 'excel') {
-        $pythonExe = Get-McpPython -HasPython $hasPython
-    }
-
     if ($selected -contains 'outlook') {
-        $outlook = Install-OutlookMcp -PythonExe $pythonExe
+        $outlookPython = Get-McpPython -Mcp $script:OutlookMcp -HasPython $hasPython
+        $outlook = Install-OutlookMcp -PythonExe $outlookPython
         if ($outlook) {
             $mcpStyle = Get-ConfigSectionStyle -ConfigJson $script:ConfigJson -Section 'mcp'
             $patch = New-McpServerPatch -Style $mcpStyle -McpName 'outlook' -Command $outlook.Command -Environment $outlook.Environment
             $script:ConfigJson = Merge-OpenCodeConfigJson -ConfigJson $script:ConfigJson -PatchJson $patch
             $results += @{ Key = 'outlook'; Ok = $true; Label = 'Outlook 邮件助手'; Detail = '已配置' }
         } else {
-            $results += @{ Key = 'outlook'; Ok = $false; Label = 'Outlook 邮件助手'; Detail = '未安装' }
+            $results += @{ Key = 'outlook'; Ok = $false; Label = 'Outlook 邮件助手'; Detail = '安装失败，未更新配置' }
         }
     }
     if ($selected -contains 'excel') {
-        $excel = Install-ExcelMcp -PythonExe $pythonExe
+        $excelPython = Get-McpPython -Mcp $script:ExcelMcp -HasPython $hasPython
+        $excel = Install-ExcelMcp -PythonExe $excelPython
         if ($excel) {
             $mcpStyle = Get-ConfigSectionStyle -ConfigJson $script:ConfigJson -Section 'mcp'
             $patch = New-McpServerPatch -Style $mcpStyle -McpName $script:ExcelMcp.Name -Command $excel.Command -Environment $excel.Environment
             $script:ConfigJson = Merge-OpenCodeConfigJson -ConfigJson $script:ConfigJson -PatchJson $patch
             $results += @{ Key = 'excel'; Ok = $true; Label = 'Excel 表格助手'; Detail = '已配置（my-excel）' }
         } else {
-            $results += @{ Key = 'excel'; Ok = $false; Label = 'Excel 表格助手'; Detail = '未安装' }
+            $results += @{ Key = 'excel'; Ok = $false; Label = 'Excel 表格助手'; Detail = '安装失败，未更新配置' }
         }
     }
 
@@ -1398,7 +1419,7 @@ function Show-Completion {
     Write-SectionTitle '路径'
     Write-KeyValue '配置文件' $script:ConfigFile
     Write-KeyValue '技能目录' $script:SkillsDir
-    Write-KeyValue 'MCP 环境' $script:VenvDir
+    Write-KeyValue 'MCP 环境' $script:McpDir
     Write-KeyValue '日志文件' $script:LogFile
 
     if ($script:DryRun) {

@@ -27,7 +27,7 @@ $vendorPs2exe = Join-Path $PSScriptRoot 'vendor\ps2exe.ps1'
 $installScript = Join-Path $srcDir 'install.ps1'
 $coreScript = Join-Path $srcDir 'lib\installer-core.ps1'
 $uiScript = Join-Path $srcDir 'lib\ui.ps1'
-$version = '4.2.1.0'
+$version = '4.2.2.0'
 
 . $coreScript
 

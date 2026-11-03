@@ -8,8 +8,7 @@ version = "0.1.8.post1"
 description = "Self-hosted fork of excel-mcp-server (private use, not published)"
 requires-python = ">=3.9"
 dependencies = [
-    "fastmcp",
-    "mcp",
+    "mcp>=1.24,<2",
     "openpyxl",
     "typer",
 ]

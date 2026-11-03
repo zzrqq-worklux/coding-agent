@@ -1,4 +1,4 @@
-# OpenCode 一键安装器 v4.2.1
+# OpenCode 一键安装器 v4.2.2
 
 面向国内零基础用户的 OpenCode 安装器（Windows 10/11，简体中文，管理员/普通用户双模式）。
 
@@ -17,10 +17,20 @@
 - **DeepSeek 动态模型**：安装时调用 `GET https://api.deepseek.com/v1/models`，不再写死模型名；接口不可用时可手动输入模型 ID。
 - **V2 原生配置**：新配置写 `providers` / `settings` / `mcp.servers` / `permissions` / `agents.title.model`。
 - **兼容已有 V1 配置**：按区段检测 `provider` vs `providers`、`mcp.<name>` vs `mcp.servers`、`permission` vs `permissions`，保留原格式，避免破坏旧配置。
-- **MCP 独立环境**：Outlook / Excel 安装到 `~/.config/opencode/mcp-servers/venv`，配置指向 venv 的 python，避免污染全局 Python。
+- **MCP 独立环境**：Outlook / Excel 分别安装到 `~/.config/opencode/mcp-servers/venv-outlook` / `venv-excel`，配置指向各自的 venv python，避免两个 MCP 的 `mcp` / `fastmcp` 版本互相破坏，也不污染全局 Python。
 - **Excel MCP 复用本机名称**：配置项使用 `my-excel`，不会和已有的 Excel MCP 重复。
 - **TUI 重做**：环境预检、执行计划确认、分步进度、最终报告、转录日志。
 - **内置组件更新**：PPT-Master 升到 6.7.3（本机 Kobold 副本打包，排除 `.env`）；Outlook / Excel MCP 使用本机更新后的源码。
+
+## v4.2.2 my-excel MCP 启动修复
+
+- **根因**：Excel MCP 的依赖写成不限制版本的 `mcp`，新装会拿到 mcp 2.x；mcp 2 已删除 `mcp.server.fastmcp`，`my-excel` 启动即 `ModuleNotFoundError`，OpenCode 显示 `MCP server failed: my-excel`。
+- **依赖固定**：Excel MCP 改为 `mcp>=1.24,<2`，并移除未使用的 `fastmcp` 依赖；Outlook MCP 固定 `fastmcp>=2.0,<5`。
+- **每个 MCP 独立 venv**：`mcp-servers/venv-excel` 与 `mcp-servers/venv-outlook` 分开，Excel 使用 mcp 1.x、Outlook 使用 FastMCP 4.x 也不会互相降级/破坏。
+- **真实启动探针**：安装后导入 `excel_mcp.server` / `outlook_com_mcp.server`，不再只导入空的包 `__init__`；探针失败会强制重装依赖，仍失败则跳过该 MCP 的配置更新（已有配置保持不变）。
+- **升级不再复用旧源码**：只要内嵌 zip 存在就重新解压到 `%TEMP%`，避免老用户重跑时继续使用上一版未修复的 `excel_mcp` 代码。
+- **旧用户修复**：重跑安装器即可；确认两个新 venv 正常后，可手动删除旧的共享目录 `~/.config/opencode/mcp-servers/venv`。
+- 单测增加到 177 个（Windows PowerShell 5.1 下全部通过）。
 
 ## v4.2.1 安装计划与输入修复
 
@@ -73,7 +83,7 @@ opencode-installer/
 │     ├─ guizang-ppt-skill/            # 归藏技能源目录（构建时打包）
 │     ├─ outlook-mcp/                  # 本机新版 Outlook MCP 源码
 │     └─ excel-mcp/                    # 本机新版 Excel MCP 源码
-├─ tests/installer-core.Tests.ps1 # Pester 单测（170 个）
+├─ tests/installer-core.Tests.ps1 # Pester 单测（177 个）
 ├─ build/
 │  ├─ build.ps1                   # 单测 → 打包 → 编译 → 资源校验 → 冒烟 →（可选）签名
 │  ├─ vendor/ps2exe.ps1           # PS2EXE 编译器（离线构建用，MS-LPL）
@@ -111,7 +121,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -Sign -PfxPath D:\cert\
 - `build/release/opencode安装器-便携版.zip`
 - `build/release/opencode安装器-厚重版.zip`
 
-构建流程自带验证：**170 个单测** → **资源打包** → **exe 编译** → **内嵌资源校验** → **`-DryRun` 冒烟测试** → **`-SelfTest` 自检** → **发布目录/zip 打包**，任一失败即中止构建。`-NoPackage` 可跳过最后的发布打包。
+构建流程自带验证：**177 个单测** → **资源打包** → **exe 编译** → **内嵌资源校验** → **`-DryRun` 冒烟测试** → **`-SelfTest` 自检** → **发布目录/zip 打包**，任一失败即中止构建。`-NoPackage` 可跳过最后的发布打包。
 
 ## 安装器行为
 
@@ -129,7 +139,7 @@ powershell -ExecutionPolicy Bypass -File build\build.ps1 -Sign -PfxPath D:\cert\
    - 模型列表完全来自接口；接口不可用时才要求手动输入，不内置写死的模型名。
 6. **组件菜单**：按 edition 过滤；便携版只有 Outlook / Excel，厚重版四个组件全显示。
 7. **技能部署**：`~/.config/opencode/skills`，保留用户 `.env`，写版本清单。
-8. **MCP 部署**：独立 venv `~/.config/opencode/mcp-servers/venv`，`pip install` 本地包（清华源，失败回退默认源），配置指向 venv python；Excel 使用 `my-excel` 名称。
+8. **MCP 部署**：每个 MCP 独立 venv（`mcp-servers/venv-outlook` / `venv-excel`），`pip install` 本地包（清华源，失败回退默认源），配置指向对应 venv python；安装后导入 `*.server` 做启动探针；Excel 使用 `my-excel` 名称。
 9. **配置写入**：先备份，再深度合并，最后校验 JSON；只写一次，避免半成品配置。
 10. **完成报告**：每个组件成功/失败、配置路径、日志路径、下一步。
 

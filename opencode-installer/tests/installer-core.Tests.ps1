@@ -1024,3 +1024,56 @@ Describe 'Get-PackageVersionFromPyProject' {
         Get-PackageVersionFromPyProject -Path $p | Should Be $null
     }
 }
+
+Describe 'Expand-McpPackage' {
+    It 'refreshes the extracted package when the zip exists' {
+        $root = Join-Path $script:TmpRoot ('mcp-refresh-' + [guid]::NewGuid().ToString('N'))
+        $src = Join-Path $root 'src'
+        New-Item -ItemType Directory -Force -Path $src | Out-Null
+        Set-Content -LiteralPath (Join-Path $src 'pyproject.toml') -Value 'new' -Encoding UTF8
+        $zip = Join-Path $root 'excel-mcp.zip'
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::CreateFromDirectory($src, $zip)
+        $dest = Join-Path $root 'out\excel-mcp'
+        New-Item -ItemType Directory -Force -Path $dest | Out-Null
+        Set-Content -LiteralPath (Join-Path $dest 'pyproject.toml') -Value 'old' -Encoding UTF8
+        Expand-McpPackage -ZipPath $zip -PackageRoot $dest | Should Be $true
+        (Get-Content -LiteralPath (Join-Path $dest 'pyproject.toml') -Raw).Trim() | Should Be 'new'
+    }
+    It 'keeps an existing source directory when no zip is present' {
+        $root = Join-Path $script:TmpRoot ('mcp-src-' + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Force -Path $root | Out-Null
+        Set-Content -LiteralPath (Join-Path $root 'keep.txt') -Value 'keep' -Encoding UTF8
+        Expand-McpPackage -ZipPath (Join-Path $root 'missing.zip') -PackageRoot $root | Should Be $true
+        Test-Path (Join-Path $root 'keep.txt') | Should Be $true
+    }
+    It 'returns false when neither source exists' {
+        $root = Join-Path $script:TmpRoot ('mcp-none-' + [guid]::NewGuid().ToString('N'))
+        Expand-McpPackage -ZipPath (Join-Path $root 'missing.zip') -PackageRoot (Join-Path $root 'missing') | Should Be $false
+    }
+}
+
+Describe 'Get-McpVenvDir' {
+    It 'creates one venv directory per MCP key' {
+        $root = 'C:\Users\me\.config\opencode\mcp-servers'
+        Get-McpVenvDir -McpRoot $root -Key 'excel' | Should Be (Join-Path $root 'venv-excel')
+        Get-McpVenvDir -McpRoot $root -Key 'outlook' | Should Be (Join-Path $root 'venv-outlook')
+    }
+    It 'throws when the key is empty' {
+        { Get-McpVenvDir -McpRoot 'C:\mcp' -Key '' } | Should Throw 'Key 不能为空'
+    }
+}
+
+Describe 'MCP dependency pins' {
+    It 'pins excel MCP to the mcp 1.x API and drops unused fastmcp' {
+        $path = Join-Path $here '..\src\assets\excel-mcp\pyproject.toml'
+        $text = Get-Content -LiteralPath $path -Raw -Encoding UTF8
+        $text | Should Match 'mcp>=1\.24,<2'
+        $text | Should Not Match 'fastmcp'
+    }
+    It 'pins outlook MCP below the next fastmcp major' {
+        $path = Join-Path $here '..\src\assets\outlook-mcp\pyproject.toml'
+        $text = Get-Content -LiteralPath $path -Raw -Encoding UTF8
+        $text | Should Match 'fastmcp>=2\.0,<5'
+    }
+}

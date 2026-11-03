@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "pywin32>=306",
-    "fastmcp>=2.0",
+    "fastmcp>=2.0,<5",
 ]
 
 [project.optional-dependencies]

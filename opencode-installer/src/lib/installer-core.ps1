@@ -1,6 +1,6 @@
 ﻿# installer-core.ps1 - core logic for OpenCode 安装器 (v4)
 
-$script:InstallerCoreVersion = '4.2.1'
+$script:InstallerCoreVersion = '4.2.2'
 $script:PowerShell7Version = '7.6.9'
 $script:PowerShell7Sha256 = 'CE7484804C0F0AD4DDA10C958E71ACDAF7EEBFB22505C1B480F89E0E9F1DA94D'
 
@@ -1103,6 +1103,24 @@ function Expand-ZipPackage {
     $parent = Split-Path -Parent $Destination
     if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
     [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $Destination)
+}
+
+function Expand-McpPackage {
+    param([string]$ZipPath, [string]$PackageRoot)
+
+    if (Test-Path -LiteralPath $ZipPath) {
+        Expand-ZipPackage -ZipPath $ZipPath -Destination $PackageRoot
+        return $true
+    }
+    return (Test-Path -LiteralPath $PackageRoot)
+}
+
+function Get-McpVenvDir {
+    param([string]$McpRoot, [string]$Key)
+
+    if ([string]::IsNullOrWhiteSpace($McpRoot)) { throw 'McpRoot 不能为空' }
+    if ([string]::IsNullOrWhiteSpace($Key)) { throw 'Key 不能为空' }
+    return (Join-Path $McpRoot ("venv-" + $Key))
 }
 
 function Get-PackageVersionFromPyProject {
